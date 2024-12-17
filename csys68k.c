@@ -76,6 +76,7 @@ int write (int fd, char *buf, int nbytes)
   }
   return (nbytes);
 }
+
 int fcntl(int fd, int cmd, ...){
 	if(cmd == F_GETFL) {
 		return O_RDWR;

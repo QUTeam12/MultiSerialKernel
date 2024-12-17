@@ -8,7 +8,15 @@ FILE *com1in;/* UART2からの読み込み*/
 FILE *com1out;/* UART2からの書き込み*/
 
 void task1(){
-	while(1){}
+	while(1){
+		char s[256];
+		scanf("%s", s);
+		printf("p0: %s\n", s);
+		char s2[256];
+		fscanf(com1in, "%s", s2);
+		fprintf(com1out, "p1: %s\n", s2);
+		
+	}
 }
 
 void setfd(){

@@ -181,7 +181,7 @@ void v_body(TASK_ID_TYPE semaphoreId){
 *************************/
 void sched(){
 	next_task = removeq(&ready);
-	printf("next->%d\n",next_task);
+	// printf("next->%d\n",next_task);
 	if(next_task == NULLTASKID){
 		while(1){
 		}
