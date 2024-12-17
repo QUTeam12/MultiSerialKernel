@@ -4,6 +4,11 @@
 .text
 .even
 
+********************
+** outbyte: 
+** 入力: fd(long, 4bytes): チャンネルの指定
+** 入力: c(long, 4bytes): long拡張された1文字データ 
+********************
 outbyte:
 	movem.l	%d1-%d3/%a0, -(%sp)
 	bra	loop
@@ -21,5 +26,5 @@ loop:
 	cmpi.l	#1, %d0
 	bne	loop
 
-	movem.l	(%sp)+, %d1-%d3
+	movem.l	(%sp)+, %d1-%d3/%a0
 	rts

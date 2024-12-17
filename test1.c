@@ -2,9 +2,9 @@
 
 int main() {
 	while(1) {
-		char c;
-		scanf("%c", &c);
-		printf("%c", c);
+		char c[256];
+		scanf("%s", c);
+		printf("%s", c);
 	}
 	return 0;
 }
