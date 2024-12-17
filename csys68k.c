@@ -1,9 +1,11 @@
-#include <stdarg.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <stdarg.h>
+
 extern void outbyte(int port,unsigned char c);
 extern char inbyte(int port);
 
-int readTask(char *buf,int nbytes, int port){
+int readTask(int port, char *buf,int nbytes){
   char c;
   int  i;
 
@@ -42,16 +44,16 @@ int read(int fd, char *buf, int nbytes)
 {
   int i = 0;
   if(fd == 0 || fd == 3){
-    i = readTask(buf,nbytes,0);
+    i = readTask(0,buf,nbytes);
   }else if (fd == 4){
-    i = readTask(buf,nbytes,1);  
+    i = readTask(1,buf,nbytes);  
   }else{
-    //error
+    return EBADF;
   }
   return (i);
 }
 
-void writeTask(char *buf, int nbytes, int port){
+void writeTask(int port, char *buf, int nbytes){
   int i, j;
   for (i = 0; i < nbytes; i++) {
     if (*(buf + i) == '\n') {
@@ -66,11 +68,11 @@ void writeTask(char *buf, int nbytes, int port){
 int write (int fd, char *buf, int nbytes)
 {
   if(fd == 1 || fd == 2 || fd == 3){
-    writeTask(buf,nbytes,0);
+    writeTask(0,buf,nbytes);
   }else if(fd == 4){
-    writeTask(buf,nbytes,1);
+    writeTask(1,buf,nbytes);
   }else{
-    //error
+    return EBADF;
   }
   return (nbytes);
 }
