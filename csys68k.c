@@ -1,44 +1,33 @@
+#include <stdarg.h>
 #include <fcntl.h>
-// #include <varargs.h>
+extern void outbyte(int port,unsigned char c);
+extern char inbyte(int port);
 
-extern void outbyte(int fd, unsigned char c);
-extern char inbyte(int fd);
-
-/*
-int fcntl(int fd, int cmd, ...) {
-	if (cmd == F_GETFL) {
-		return O_RDWR;
-	} else {
-		return 0;
-}
-*/
-
-int read(int fd, char *buf, int nbytes)
-{
+int readTask(char *buf,int nbytes, int port){
   char c;
   int  i;
 
   for (i = 0; i < nbytes; i++) {
-    c = inbyte(0);
+    c = inbyte(port);
 
     if (c == '\r' || c == '\n'){ /* CR -> CRLF */
-      outbyte(0, '\r');
-      outbyte(0, '\n');
+      outbyte(port,'\r');
+      outbyte(port,'\n');
       *(buf + i) = '\n';
 
     /* } else if (c == '\x8'){ */     /* backspace \x8 */
     } else if (c == '\x7f'){      /* backspace \x8 -> \x7f (by terminal config.) */
       if (i > 0){
-	outbyte(0, '\x8'); /* bs  */
-	outbyte(0, ' ');   /* spc */
-	outbyte(0, '\x8'); /* bs  */
+	outbyte(port,'\x8'); /* bs  */
+	outbyte(port,' ');   /* spc */
+	outbyte(port,'\x8'); /* bs  */
 	i--;
       }
       i--;
       continue;
 
     } else {
-      outbyte(0, c);
+      outbyte(port,c);
       *(buf + i) = c;
     }
 
@@ -46,18 +35,49 @@ int read(int fd, char *buf, int nbytes)
       return (i + 1);
     }
   }
+  return i;
+}
+
+int read(int fd, char *buf, int nbytes)
+{
+  int i = 0;
+  if(fd == 0 || fd == 3){
+    i = readTask(buf,nbytes,0);
+  }else if (fd == 4){
+    i = readTask(buf,nbytes,1);  
+  }else{
+    //error
+  }
   return (i);
 }
 
-int write (int fd, char *buf, int nbytes)
-{
+void writeTask(char *buf, int nbytes, int port){
   int i, j;
   for (i = 0; i < nbytes; i++) {
     if (*(buf + i) == '\n') {
-      outbyte (0, '\r');          /* LF -> CRLF */
+      outbyte (port,'\r');          /* LF -> CRLF */
     }
-    outbyte (0, *(buf + i));
+    outbyte (port,*(buf + i));
     for (j = 0; j < 300; j++);
   }
+}
+
+
+int write (int fd, char *buf, int nbytes)
+{
+  if(fd == 1 || fd == 2 || fd == 3){
+    writeTask(buf,nbytes,0);
+  }else if(fd == 4){
+    writeTask(buf,nbytes,1);
+  }else{
+    //error
+  }
   return (nbytes);
+}
+int fcntl(int fd, int cmd, ...){
+	if(cmd == F_GETFL) {
+		return O_RDWR;
+	}else{
+		return 0;
+	}	
 }
