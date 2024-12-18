@@ -23,16 +23,13 @@ void init_kernel() {
 	// readyキューの初期化
 	ready = NULLTASKID;
 	// PVシステムコールの割り込み処理ルーチン(pv_handler)をTRAP1の割り込みベクタに登録
-	*(void(**) ())0x084 =pv_handler; // TODO: trap1のアドレスがあってるかわからない
+	*(void(**) ())0x084 =pv_handler;
 	// セマフォのフィールド群の初期化
 	for(int i=0; i< NUMSEMAPHORE;i++){
-		semaphore[i].count = 1; // TODO: 初期のリソースアクセス状況は1だが正直わからん
+		semaphore[i].count = 1;
 		semaphore[i].nst = UNDEFINED;
 		semaphore[i].task_list 	= NULLTASKID;
 	}
-	//タスクの同期処理
-	semaphore[0].count = 1;
-	semaphore[1].count = 0;
 }
 
 /***********************************
@@ -48,7 +45,6 @@ void* init_stack(TASK_ID_TYPE id) {
  	// スタックにタスクのアドレスをプッシュ
   	*(--ssp) = (int)task_tab[id].task_addr;
 	//initial SRを0x0000に設定
-	// TODO: アドレス計算再チェック
 	ssptmp = (unsigned short int *)ssp;
 	*(--ssptmp) = (unsigned short int)0;
 	ssp = (int *)ssptmp;

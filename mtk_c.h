@@ -1,6 +1,6 @@
 #define NULLTASKID 0	// キューの終端
-#define NUMSEMAPHORE 3	// セマフォの数。任意。
-#define NUMTASK 5	// 最大タスク数。任意。
+#define NUMSEMAPHORE 8	// セマフォの数。任意。
+#define NUMTASK 8	// 最大タスク数。任意。
 #define STKSIZE 8000	// スタックサイズ
 #define UNDEFINED 0	// int型フィールドの初期化用
 
@@ -8,9 +8,6 @@
 #define TCB_UNDEFINED 0
 #define TCB_ACTIVE 1
 #define TCB_FINISH 2
-
-
-
 
 typedef int TASK_ID_TYPE;
 
@@ -20,8 +17,6 @@ typedef struct {
 	TASK_ID_TYPE task_list;	// TODO: セマフォの一番前のタスクID。実行中なのか待機中なのかは不明
 } SEMAPHORE_TYPE;
 
-
-
 typedef struct {
 	void (*task_addr)();	// タスクの関数ポインタ
 	void *stack_ptr;	// タスク毎にユーザスタックとスーパーバイザスタックを分けるスタックのポインタ
@@ -30,12 +25,11 @@ typedef struct {
 	TASK_ID_TYPE next;	// セマフォかreadyキューの次のタスクID。詳細はp33。
 } TCB_TYPE;
 
-
-
 typedef struct {
 	char ustack[STKSIZE];	// ユーザスタック
 	char sstack[STKSIZE];	// スーパーバイザスタック
 } STACK_TYPE;
+
 #ifdef MTK
 //大域変数
 SEMAPHORE_TYPE  semaphore[NUMSEMAPHORE];
@@ -46,7 +40,6 @@ TASK_ID_TYPE curr_task; // 現在実行中のタスクのID
 TASK_ID_TYPE new_task;  // 現在登録作業中のタスクのID
 TASK_ID_TYPE next_task; // 次に実行するタスクのID
 TASK_ID_TYPE ready;     // 実行待ちタスクのキューの先頭タスクのID
-
 
 //外部関数
 extern void first_task();

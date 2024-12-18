@@ -15,7 +15,7 @@ default:
 	@echo '# make depend -- make dependency in .depend       #'
 	@echo '###################################################'
 
-all: test1 test2 test3
+all: test1 test2 test3 fs
 
 test1:
 	$(MAKE) $(MAKEFLAGS) LIB_JIKKEN=$(LIB_JIKKEN) -f Makefile.1
@@ -23,5 +23,7 @@ test2:
 	$(MAKE) $(MAKEFLAGS) LIB_JIKKEN=$(LIB_JIKKEN) -f Makefile.2
 test3:
 	$(MAKE) $(MAKEFLAGS) LIB_JIKKEN=$(LIB_JIKKEN) -f Makefile.3
+fs:
+	$(MAKE) $(MAKEFLAGS) LIB_JIKKEN=$(LIB_JIKKEN) -f Makefile.fs
 
 include $(LIB_JIKKEN)/make.conf

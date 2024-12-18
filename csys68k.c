@@ -5,6 +5,14 @@
 extern void outbyte(int port,unsigned char c);
 extern char inbyte(int port);
 
+int fcntl(int fd, int cmd, ...){
+	if(cmd == F_GETFL) {
+		return O_RDWR;
+	}else{
+		return 0;
+	}	
+}
+
 int readTask(int port, char *buf,int nbytes){
   char c;
   int  i;
@@ -77,10 +85,3 @@ int write (int fd, char *buf, int nbytes)
   return (nbytes);
 }
 
-int fcntl(int fd, int cmd, ...){
-	if(cmd == F_GETFL) {
-		return O_RDWR;
-	}else{
-		return 0;
-	}	
-}
