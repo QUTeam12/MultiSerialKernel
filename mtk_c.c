@@ -7,11 +7,19 @@ void printdebug(int a){
 	printf("%d\n",a);
 }
 
+unsigned int get_ms(){
+	return time_ms;
+}
+
+
 /***********************************
  * @brief カーネルの初期化
  * @author 小紫
  **********************************/
 void init_kernel() {
+	//time_msの初期化
+	time_ms=(unsigned int)0;
+
 	// TCB配列の初期化
 	for(int i=1; i <= NUMTASK; i++){
 		task_tab[i].task_addr = NULL;

@@ -13,6 +13,7 @@
 .extern next_task
 .extern	task_tab
 .extern ready
+.extern time_ms
 
 .extern p_body
 .extern v_body
@@ -123,6 +124,13 @@ pv_handler_end:
 *****************************
 hard_clock:
 	movem.l %d0-%d7/%a0-%a6, -(%sp)
+	
+	/*下は時間カウント用に追加したもの*/
+	move.l 	time_ms,%d0
+	lea.l	time_ms,%a0
+	add.l	#10,%d0
+	move.l	%d0,(%a0)
+
 	move.l  curr_task, -(%sp)
 	lea.l ready, %a0
 	move.l  %a0, -(%sp)
