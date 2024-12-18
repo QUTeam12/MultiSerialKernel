@@ -1,5 +1,5 @@
 #define NULLTASKID 0	// キューの終端
-#define NUMSEMAPHORE 3	// セマフォの数。任意。
+#define NUMSEMAPHORE 4	// セマフォの数。任意。
 #define NUMTASK 5	// 最大タスク数。任意。
 #define STKSIZE 8000	// スタックサイズ
 #define UNDEFINED 0	// int型フィールドの初期化用

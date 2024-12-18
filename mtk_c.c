@@ -26,13 +26,12 @@ void init_kernel() {
 	*(void(**) ())0x084 =pv_handler; // TODO: trap1のアドレスがあってるかわからない
 	// セマフォのフィールド群の初期化
 	for(int i=0; i< NUMSEMAPHORE;i++){
-		semaphore[i].count = 1; // TODO: 初期のリソースアクセス状況は1だが正直わからん
+		semaphore[i].count = 1; 
 		semaphore[i].nst = UNDEFINED;
 		semaphore[i].task_list 	= NULLTASKID;
 	}
 	//タスクの同期処理
-	semaphore[0].count = 1;
-	semaphore[1].count = 0;
+	semaphore[0].count = 0;
 }
 
 /***********************************
@@ -124,6 +123,7 @@ void addq(TASK_ID_TYPE *pointer, TASK_ID_TYPE taskId){
 TASK_ID_TYPE removeq(TASK_ID_TYPE *pointer){
 	TASK_ID_TYPE retval = *pointer;
 	*pointer = task_tab[retval].next;
+	task_tab[retval].next = NULLTASKID;
 	return retval;	
 }
 
@@ -133,6 +133,7 @@ TASK_ID_TYPE removeq(TASK_ID_TYPE *pointer){
  * @author 宗藤
  **********************************/
 void sleep(int ch){
+	printf("sleep%d\n",curr_task);
 	addq(&semaphore[ch].task_list, curr_task);  // セマフォにcurr_taskを追加
 	sched();
 	swtch();
@@ -144,6 +145,7 @@ void sleep(int ch){
  * @author 宗藤
  **********************************/
 void wakeup(int ch){
+	printf("wakeup%d\n",semaphore[ch].task_list);
 	TASK_ID_TYPE task = removeq(&semaphore[ch].task_list); // task = セマフォから取り出したタスク
 	if(task != NULLTASKID){
 		addq(&ready, task);  // readyにtaskを追加
@@ -181,7 +183,7 @@ void v_body(TASK_ID_TYPE semaphoreId){
 *************************/
 void sched(){
 	next_task = removeq(&ready);
-	// printf("next->%d\n",next_task);
+	 printf("next->%d\n",next_task);
 	if(next_task == NULLTASKID){
 		while(1){
 		}
