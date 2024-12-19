@@ -5,6 +5,12 @@
 extern void outbyte(int port,unsigned char c);
 extern char inbyte(int port);
 
+int readTask(int port, char* buf, int nbytes);
+
+int readInterface(int port, char *buf, int nbytes){
+	 return readTask(port, buf, nbytes);
+}
+
 int readTask(int port, char *buf,int nbytes){
   char c;
   int  i;
@@ -40,13 +46,15 @@ int readTask(int port, char *buf,int nbytes){
   return i;
 }
 
+
+
 int read(int fd, char *buf, int nbytes)
 {
   int i = 0;
   if(fd == 0 || fd == 3){
-    i = readTask(0,buf,nbytes);
+    i = readInterface(0,buf,nbytes);
   }else if (fd == 4){
-    i = readTask(1,buf,nbytes);  
+    i = readInterface(1,buf,nbytes);  
   }else{
     return EBADF;
   }

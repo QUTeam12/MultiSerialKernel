@@ -133,7 +133,6 @@ TASK_ID_TYPE removeq(TASK_ID_TYPE *pointer){
  * @author 宗藤
  **********************************/
 void sleep(int ch){
-	printf("sleep%d\n",curr_task);
 	addq(&semaphore[ch].task_list, curr_task);  // セマフォにcurr_taskを追加
 	sched();
 	swtch();
@@ -145,7 +144,6 @@ void sleep(int ch){
  * @author 宗藤
  **********************************/
 void wakeup(int ch){
-	printf("wakeup%d\n",semaphore[ch].task_list);
 	TASK_ID_TYPE task = removeq(&semaphore[ch].task_list); // task = セマフォから取り出したタスク
 	if(task != NULLTASKID){
 		addq(&ready, task);  // readyにtaskを追加
@@ -183,7 +181,6 @@ void v_body(TASK_ID_TYPE semaphoreId){
 *************************/
 void sched(){
 	next_task = removeq(&ready);
-	 printf("next->%d\n",next_task);
 	if(next_task == NULLTASKID){
 		while(1){
 		}
