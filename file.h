@@ -2,15 +2,23 @@
 #define NUM_FILE 8
 #define UNDEFINED_SIZE -1
 
+typedef int FILE_ID_TYPE;
+
 typedef struct {
-	char name[16];          // ファイル名
-	int size;               // ファイルサイズ
-	char* buffer[256];            // ファイルデータへのポインタ
-	int semaphore_id;      // 排他制御用セマフォID
+        char name[16 + 1];  // ファイル名(確保するバイトに終端文字\0を含むため17バイトで16文字まで)
+        int size;           // ファイルサイズ
+        char buffer[256];   // ファイルデータ
+        // char* buffer;       // ファイルデータのポインタ
+        int semaphore_id;  // 排他制御用セマフォID
 } FILE_ENTRY;
 
 void print_file_table();
 void init_file_table();
-void touch(char *filename);
-void edit(char *filename);
-
+void touch(const char* filename);
+void check_null(char* ptr);
+void copy_string(const char* from, char* to, size_t to_size);
+void edit(const char* filename);
+FILE_ID_TYPE search_file_id(const char* filename);
+void write_lines(char* buffer);
+void write_to_file(const char* buffer, FILE_ID_TYPE id);
+void rm(const char* filename);
