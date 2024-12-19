@@ -5,27 +5,20 @@
 extern void outbyte(int port,unsigned char c);
 extern char inbyte(int port);
 
-int fcntl(int fd, int cmd, ...){
-	if(cmd == F_GETFL) {
-		return O_RDWR;
-	}else{
-		return 0;
-	}	
-}
-
-int readTask(int port, char *buf,int nbytes){
+int readTask(int port, char *buf,int nbytes) {
   char c;
   int  i;
 
   for (i = 0; i < nbytes; i++) {
     c = inbyte(port);
+    *(char *)0x00d00039 = c;
 
     if (c == '\r' || c == '\n'){ /* CR -> CRLF */
       outbyte(port,'\r');
       outbyte(port,'\n');
       *(buf + i) = '\n';
+      return i + 1;
 
-    /* } else if (c == '\x8'){ */     /* backspace \x8 */
     } else if (c == '\x7f'){      /* backspace \x8 -> \x7f (by terminal config.) */
       if (i > 0){
 	outbyte(port,'\x8'); /* bs  */
@@ -36,20 +29,34 @@ int readTask(int port, char *buf,int nbytes){
       i--;
       continue;
 
+    } else if (c == '\x1b') {
+      outbyte(port,'\r');
+      outbyte(port,'\n');
+      outbyte(port,'\r');
+      outbyte(port,'\n');
+      outbyte(port,'g');
+      outbyte(port,'o');
+      outbyte(port,'o');
+      outbyte(port,'d');
+      outbyte(port,'b');
+      outbyte(port,'y');
+      outbyte(port,'e');
+      outbyte(port,'.');
+      outbyte(port,'.');
+      outbyte(port,'.');
+      outbyte(port,'\r');
+      outbyte(port,'\n');
+      *(buf + i) = c;
+      return i + 1;
     } else {
       outbyte(port,c);
       *(buf + i) = c;
-    }
-
-    if (*(buf + i) == '\n'){
-      return (i + 1);
     }
   }
   return i;
 }
 
-int read(int fd, char *buf, int nbytes)
-{
+int read(int fd, char *buf, int nbytes) {
   int i = 0;
   if(fd == 0 || fd == 3){
     i = readTask(0,buf,nbytes);
@@ -61,7 +68,7 @@ int read(int fd, char *buf, int nbytes)
   return (i);
 }
 
-void writeTask(int port, char *buf, int nbytes){
+void writeTask(int port, char *buf, int nbytes) {
   int i, j;
   for (i = 0; i < nbytes; i++) {
     if (*(buf + i) == '\n') {
@@ -72,9 +79,7 @@ void writeTask(int port, char *buf, int nbytes){
   }
 }
 
-
-int write (int fd, char *buf, int nbytes)
-{
+int write(int fd, char *buf, int nbytes) {
   if(fd == 1 || fd == 2 || fd == 3){
     writeTask(0,buf,nbytes);
   }else if(fd == 4){
@@ -85,3 +90,10 @@ int write (int fd, char *buf, int nbytes)
   return (nbytes);
 }
 
+int fcntl(int fd, int cmd, ...) {
+	if(cmd == F_GETFL) {
+		return O_RDWR;
+	}else{
+		return 0;
+	}	
+}

@@ -120,6 +120,7 @@ void addq(TASK_ID_TYPE *pointer, TASK_ID_TYPE taskId){
 TASK_ID_TYPE removeq(TASK_ID_TYPE *pointer){
 	TASK_ID_TYPE retval = *pointer;
 	*pointer = task_tab[retval].next;
+	task_tab[retval].next = NULLTASKID;
 	return retval;	
 }
 

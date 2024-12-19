@@ -20,7 +20,8 @@ void print_file_table() {
 			file_table[i].semaphore_id
 		);
 	}
-} 
+	printf("\n");
+}
 
 /***********************************
  * @brief ファイルテーブルの初期化
@@ -48,7 +49,6 @@ void touch(char *filename) {
 	}
 }
 
-
 /***********************************
  * @brief ファイルの編集
  * @param name: 文字配列(の先頭アドレス)
@@ -57,7 +57,17 @@ void edit(char *filename) {
 	for (int i = 0; i < NUM_FILE; i++) {
 		if (strcmp(file_table[i].name, filename) == 0) {
 			char buffer[256];
-			scanf("%s", buffer);
+			while (1) {
+				char temp[256];
+				scanf("%[^\n]%*c", temp);
+				printf("\ntemp: %s\n", temp);
+				strcat(buffer, temp);
+				int n_chars = strlen(temp);
+				if (n_chars > 0 && temp[n_chars - 1] == 0x1b) {
+					temp[n_chars - 1] = '\0'; // Escを除去
+					break;
+				}
+			}
 			if (file_table[i].buffer[0] == '\0') {
 				file_table[i].size = strlen(buffer);
 				if (buffer != NULL) {
@@ -69,3 +79,7 @@ void edit(char *filename) {
 	}
 }
 
+/***********************************
+ * @brief ファイルの書き込み
+ * @param buffer: 文字配列(の先頭アドレス)
+ **********************************/

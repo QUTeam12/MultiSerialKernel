@@ -22,8 +22,10 @@ void task1(){
 	while(1) {
 		char filename[] = "newfile";
 		touch(filename);
+		printf("filename is updated\n");
 		print_file_table();
 		edit(filename);
+		printf("buffer is updated\n");
 		print_file_table();
 	}
 }
