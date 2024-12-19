@@ -3,10 +3,10 @@
 #include "file.h"
 #include "mtk_c.h"
 
-FILE* com0in;  /* UART1からの読み込み*/
-FILE* com0out; /* UART1からの書き込み*/
-FILE* com1in;  /* UART2からの読み込み*/
-FILE* com1out; /* UART2からの書き込み*/
+FILE* com0in;  // UART1からの読み込み
+FILE* com0out; // UART1からの書き込み
+FILE* com1in;  // UART2からの読み込み
+FILE* com1out; // UART2からの書き込み
 
 void set_fd() {
     const char* read = "r";
