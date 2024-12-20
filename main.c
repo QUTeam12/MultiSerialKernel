@@ -27,7 +27,15 @@ void task1() {
         edit(filename);
         printf("buffer is updated\n");
         print_file_table();
+		// rm(filename);
+        // printf("file is deleted\n");
+        // print_file_table();
     }
+}
+
+void task2() {
+	fprintf(com1out, "\n:Read Only Mode: Someone else is Write Mode.\n");
+	fprintf(com1out, "If you wanna switch to Write Mode, Please push [Esc].\n");
 }
 
 int main() {

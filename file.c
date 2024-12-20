@@ -1,4 +1,5 @@
 #include "file.h"
+#include "mtk_c.h"
 
 #include <stddef.h>
 #include <stdio.h>
@@ -54,9 +55,9 @@ void touch(const char* filename) {
  * @brief 文字配列の先頭アドレスがNULLの場合にエラーを出力して強制終了する
  * @param ptr: 文字配列(の先頭アドレス)
  **********************************/
-void check_null(char* ptr) {
+void check_null(const char* ptr) {
     if (ptr == NULL) {
-        fprintf(stderr, "check_null: invalid argument\n");
+        fprintf(stderr, "Null Pointer Error: (check_null) ptr is nullptr\n");
         exit(EXIT_FAILURE);
     }
 }
@@ -67,9 +68,9 @@ void check_null(char* ptr) {
  * @param to コピー先の文字列バッファ
  * @param to_size コピー先のバッファサイズ(関数内だとポインタのサイズを得てしまうため関数外でサイズを指定する必要がある)
  **********************************/
-void copy_string(const char* from, char* to, size_t to_size) {
+void copy_string(const char* from, char* to, int to_size) {
     if (to_size == 0) {
-        fprintf(stderr, "copy_string: invalid argument\n");
+        fprintf(stderr, "Copy Error: (copy_string) to_size is 0\n");
         exit(EXIT_FAILURE);
     }
     strncpy(to, from, to_size - 1);
@@ -83,8 +84,12 @@ void copy_string(const char* from, char* to, size_t to_size) {
 void edit(const char* filename) {
     check_null(filename);
     FILE_ID_TYPE id = search_file_id(filename);
+	if (id == -1) {
+		printf("File Not Found\n");
+		return;
+	}
     if (strcmp(file_table[id].name, filename) == 0) {
-        char buffer[256] = {0};
+        char buffer[257] = {0};
         write_lines(buffer);
         write_to_file(buffer, id);
     }
@@ -101,7 +106,7 @@ FILE_ID_TYPE search_file_id(const char* filename) {
             return id;
         }
     }
-    return;
+    return -1;
 }
 
 /***********************************
@@ -110,15 +115,22 @@ FILE_ID_TYPE search_file_id(const char* filename) {
  **********************************/
 void write_lines(char* buffer) {
     check_null(buffer);
+    char temp[257];
+    printf("\n:Write Mode: You can edit a file.\n");
+    printf("If you wanna change to Command Mode, Please push [Esc].\n\n");
     while (1) {
-        char temp[256] = {0};
-        scanf("%[^\n]%*c", temp);
-        strcat(buffer, temp);
-        int n_chars = strlen(temp);
-        if (n_chars > 0 && temp[n_chars - 1] == '\v') {
-            temp[n_chars - 1] = '\0';  // 不要な文字を除去
+		if (fgets(temp, sizeof(temp), stdin) == NULL) { // sizeof(temp)以内でtempに格納
+            fprintf(stderr, "IO Error: (write_lines) fgets failed\n");
+            exit(EXIT_FAILURE);
+		}
+		char* esc_ptr = strchr(temp, '\v');
+        if (esc_ptr) {  // Escが押されたら(csys68k.cでEsc入力でバッファに\vを入力)
+            *esc_ptr = '\0';
+            strcat(buffer, temp);
+			fflush(stdin); // fgetsの入力が257字を超えた分がstdinに残っているため破棄
             break;
         }
+        strcat(buffer, temp);
     }
 }
 
@@ -131,7 +143,10 @@ void write_to_file(const char* buffer, FILE_ID_TYPE id) {
     check_null(buffer);
     if (file_table[id].size == 0 && file_table[id].buffer[0] == '\0') {
         file_table[id].size = strlen(buffer);
+		int semaphore_id = file_table[id].semaphore_id;
+		P(semaphore_id);
         copy_string(buffer, file_table[id].buffer, sizeof(file_table[id].buffer));
+		V(semaphore_id);
     }
 }
 
@@ -144,6 +159,7 @@ void rm(const char* filename) {
     FILE_ID_TYPE id = search_file_id(filename);
     if (strcmp(file_table[id].name, filename) == 0) {
         memset(&file_table[id], 0, sizeof(FILE_ENTRY));
+        file_table[id].size = UNDEFINED_SIZE;
     }
 }
 
