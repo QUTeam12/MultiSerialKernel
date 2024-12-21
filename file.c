@@ -1,19 +1,22 @@
 #include "file.h"
-#include "mtk_c.h"
 
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stddef.h>  // NULL, size_t
+#include <stdio.h>   // FILE, fileno
+#include <stdlib.h>  // EXIT_FAILURE, exit
+#include <string.h>  // memset, strcpy, strncpy, strlen, strcmp
+
+#include "mtk_c.h"
 
 FILE_ENTRY file_table[NUM_FILE];
 
 /***********************************
  * @brief ファイルテーブルのデバッグ
+ * @param w_stream: 書き込み対応ファイルストリーム
  **********************************/
-void print_file_table() {
+void print_file_table(FILE* w_stream) {
     for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
-        printf(
+        fprintf(
+            w_stream,
             "No.%d name: %s, size: %d, buffer: %s, semaphore_id: %d\n",
             id,
             file_table[id].name,
@@ -21,7 +24,7 @@ void print_file_table() {
             file_table[id].buffer,
             file_table[id].semaphore_id);
     }
-    printf("\n");
+    fprintf(w_stream, "\n");
 }
 
 /***********************************
@@ -39,15 +42,183 @@ void init_file_table() {
 /***********************************
  * @brief ファイルの作成
  * @param filename: 文字配列(の先頭アドレス)
+ * @param w_stream: 書き込み対応ファイルストリーム
  **********************************/
-void touch(const char* filename) {
+void touch(const char* filename, FILE* w_stream) {
     check_null(filename);
+    check_null((char*)w_stream);
     for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
         if (file_table[id].name[0] == '\0') {
             copy_string(filename, file_table[id].name, sizeof(file_table[id].name));
             file_table[id].size = 0;
-            break;
+            return;
         }
+    }
+    fprintf(w_stream, "File Not Found\n");
+}
+
+/***********************************
+ * @brief 安全に文字列をコピーする
+ * @param from コピー元の文字列
+ * @param to コピー先の文字列バッファ
+ * @param to_size コピー先のバッファサイズ(関数内だとポインタのサイズを得てしまうため関数外でサイズを指定する必要がある)
+**********************************/
+void copy_string(const char* from, char* to, size_t to_size) {
+    check_null(from);
+    check_null(to);
+    if (to_size == 0) {
+        fprintf(stderr, "Copy Error: (copy_string) to_size is 0\n");
+        exit(EXIT_FAILURE);
+    }
+    strncpy(to, from, to_size - 1);
+    to[to_size - 1] = '\0';  // 終端文字を必ず設定
+}
+
+/***********************************
+ * @brief ファイルの削除
+ * @param filename: 文字配列(の先頭アドレス)
+ * @param w_stream: 書き込み対応ファイルストリーム
+ **********************************/
+void rm(const char* filename, FILE* w_stream) {
+    check_null(filename);
+    FILE_ID_TYPE id = search_file_id(filename);
+    if (id == -1) {
+        fprintf(w_stream, "File Not Found\n");
+        return;
+    }
+    if (strcmp(file_table[id].name, filename) == 0) {
+        memset(&file_table[id], 0, sizeof(FILE_ENTRY));
+        file_table[id].size = UNDEFINED_SIZE;
+    }
+}
+
+/***********************************
+ * @brief 入力を1行ずつバッファに書き込む
+ * @param filename: 文字配列(の先頭アドレス)
+ * @return FILE_ID_TYPE: ファイルテーブルのインデックス
+ **********************************/
+FILE_ID_TYPE search_file_id(const char* filename) {
+    check_null(filename);
+    for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
+        if (strcmp(file_table[id].name, filename) == 0) {
+            return id;
+        }
+    }
+    return -1;
+}
+
+/***********************************
+ * @brief ファイルの編集
+ * @param filename: 文字配列(の先頭アドレス)
+ * @param r_w_stream: 読み書き対応ファイルストリーム
+ **********************************/
+void edit(const char* filename, FILE* r_w_stream) {
+    check_null(filename);
+    FILE_ID_TYPE id = search_file_id(filename);
+    if (id == -1) {
+        fprintf(r_w_stream, "File Not Found\n");
+        return;
+    }
+    if (strcmp(file_table[id].name, filename) == 0) {
+        write_to_file(r_w_stream, id);
+    }
+}
+
+/***********************************
+ * @brief 入力をファイルテーブル内の指定したファイルに書き込む
+ * @param r_w_stream: 読み書き対応ファイルストリーム
+ * @param id: ファイルテーブルのインデックス
+ **********************************/
+void write_to_file(FILE* r_w_stream, FILE_ID_TYPE id) {
+    printf("\n:Write Mode: You can edit a file.\n");
+    printf("If you wanna change to Command Mode, Please push [Esc].\n\n");
+
+    int port = get_port(r_w_stream);
+    char* buf = file_table[id].buffer;
+    int buf_size = sizeof(file_table[id].buffer);
+    int semaphore_id = file_table[id].semaphore_id;
+
+    P(semaphore_id);
+    for (int i = 0; i < buf_size; i++) {
+        char c = inbyte(port);
+        switch (c) {
+            case '\r':  // CRの場合
+            case '\n':  // LFの場合
+                outbyte(port, '\r');
+                outbyte(port, '\n');
+                *(buf + i) = '\n';
+            case '\x1b':  // Escの場合
+                out_msg(port, "\r\n\r\n:Command Mode: You have some options.\r\n");
+                out_msg(port, "[Enter] Finish editing\r\n");
+                out_msg(port, "[w] Restart Write Mode\r\n");
+                out_msg(port, "[r] Read Mode\r\n");
+                out_msg(port, "#Attention# The user in Write mode is only one.\r\n\r\n");
+                // from
+                char command = inbyte(port);
+                switch (command) {
+                    case '\r':
+                    case '\n':
+                        V(semaphore_id);
+                        return;
+                    case 'w':
+                        out_msg(port, "\r\n\r\n:Write Mode: You can edit a file.\r\n");
+                        i--;
+                        continue;
+                    case 'r':
+                        V(semaphore_id);
+                        out_msg(port, "\r\n\r\n:Read Mode: The user in Write mode is only one.\r\n");
+                        out_msg(port, "If you wanna switch to Write Mode, Please push [Esc].\r\n\r\n");
+                        break;
+                }
+                // to
+            case '\x7f':  // バックスペースの場合
+                if (i > 0) {
+                    outbyte(port, '\x8');
+                    outbyte(port, ' ');
+                    outbyte(port, '\x8');
+                    i--;
+                }
+                i--;
+                break;
+            default:  // 通常文字の場合
+                outbyte(port, c);
+                *(buf + i) = c;
+                break;
+        }
+    }
+    fprintf(stderr, "Buffer Overflow Error: (read_chars) buf is overflowed\n");
+    exit(EXIT_FAILURE);
+}
+
+/***********************************
+ * @brief ストリームのファイルディスクリプタからポートを返す
+ * @param stream: ファイルストリーム
+**********************************/
+int get_port(FILE* stream) {
+    int fd = fileno(stream);
+    check_fd(fd);
+    switch (fd) {
+        case 0:
+        case 3:
+            return 0;
+        case 4:
+            return 1;
+        default:
+            fprintf(stderr, "Read Error: (read_lines) fd is invalid\n");
+            exit(EXIT_FAILURE);
+    }
+}
+
+/***********************************
+ * @brief ポートに文字列を出力する
+ * @param port: ポート番号
+ * @param c: 出力する文字
+ **********************************/
+void out_msg(int port, const char* msg) {
+    check_null(msg);
+    while (*msg != '\0') {
+        outbyte(port, *msg);
+        msg++;
     }
 }
 
@@ -63,106 +234,28 @@ void check_null(const char* ptr) {
 }
 
 /***********************************
- * @brief 安全に文字列をコピーする
- * @param from コピー元の文字列
- * @param to コピー先の文字列バッファ
- * @param to_size コピー先のバッファサイズ(関数内だとポインタのサイズを得てしまうため関数外でサイズを指定する必要がある)
+ * @brief 文字列のサイズが0の場合にエラーを出力して強制終了する
+ * @param to_size: コピー先のバッファサイズ
  **********************************/
-void copy_string(const char* from, char* to, int to_size) {
-    if (to_size == 0) {
-        fprintf(stderr, "Copy Error: (copy_string) to_size is 0\n");
+void check_size(size_t to_size) {
+    if (to_size <= 0) {
+        fprintf(stderr, "Read Error: (read_lines) to_size is 0 or negative\n");
         exit(EXIT_FAILURE);
     }
-    strncpy(to, from, to_size - 1);
-    to[to_size - 1] = '\0';  // 終端文字を必ず設定
 }
 
 /***********************************
- * @brief ファイルの編集
- * @param filename: 文字配列(の先頭アドレス)
+ * @brief カウントが負の値の場合にエラーを出力して強制終了する
+ * @param fd: カウント
  **********************************/
-void edit(const char* filename) {
-    check_null(filename);
-    FILE_ID_TYPE id = search_file_id(filename);
-	if (id == -1) {
-		printf("File Not Found\n");
-		return;
-	}
-    if (strcmp(file_table[id].name, filename) == 0) {
-        char buffer[257] = {0};
-        write_lines(buffer);
-        write_to_file(buffer, id);
+void check_fd(int fd) {
+    if (fd < 0) {
+        fprintf(stderr, "File Descriptor Error: (check_fd) fd is negative\n");
+        exit(EXIT_FAILURE);
     }
 }
 
-/***********************************
- * @brief 入力を1行ずつバッファに書き込む
- * @param filename: 文字配列(の先頭アドレス)
- **********************************/
-FILE_ID_TYPE search_file_id(const char* filename) {
-    check_null(filename);
-    for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
-        if (strcmp(file_table[id].name, filename) == 0) {
-            return id;
-        }
-    }
-    return -1;
-}
-
-/***********************************
- * @brief 入力を1行ずつバッファに書き込む
- * @param buffer: 文字配列(の先頭アドレス)
- **********************************/
-void write_lines(char* buffer) {
-    check_null(buffer);
-    char temp[257];
-    printf("\n:Write Mode: You can edit a file.\n");
-    printf("If you wanna change to Command Mode, Please push [Esc].\n\n");
-    while (1) {
-		if (fgets(temp, sizeof(temp), stdin) == NULL) { // sizeof(temp)以内でtempに格納
-            fprintf(stderr, "IO Error: (write_lines) fgets failed\n");
-            exit(EXIT_FAILURE);
-		}
-		char* esc_ptr = strchr(temp, '\v');
-        if (esc_ptr) {  // Escが押されたら(csys68k.cでEsc入力でバッファに\vを入力)
-            *esc_ptr = '\0';
-            strcat(buffer, temp);
-			fflush(stdin); // fgetsの入力が257字を超えた分がstdinに残っているため破棄
-            break;
-        }
-        strcat(buffer, temp);
-    }
-}
-
-/***********************************
- * @brief 入力をファイルテーブル内の指定したファイルに書き込む
- * @param buffer: 文字配列(の先頭アドレス)
- * @param id: ファイルテーブルのインデックス
- **********************************/
-void write_to_file(const char* buffer, FILE_ID_TYPE id) {
-    check_null(buffer);
-    if (file_table[id].size == 0 && file_table[id].buffer[0] == '\0') {
-        file_table[id].size = strlen(buffer);
-		int semaphore_id = file_table[id].semaphore_id;
-		P(semaphore_id);
-        copy_string(buffer, file_table[id].buffer, sizeof(file_table[id].buffer));
-		V(semaphore_id);
-    }
-}
-
-/***********************************
- * @brief ファイルの削除
- * @param filename: 文字配列(の先頭アドレス)
- **********************************/
-void rm(const char* filename) {
-    check_null(filename);
-    FILE_ID_TYPE id = search_file_id(filename);
-    if (strcmp(file_table[id].name, filename) == 0) {
-        memset(&file_table[id], 0, sizeof(FILE_ENTRY));
-        file_table[id].size = UNDEFINED_SIZE;
-    }
-}
-
+// TODO: bufをポインタにする場合
 /*
 void write_to_file(const char* buffer, FILE_ID_TYPE id) {
     check_null(buffer);
