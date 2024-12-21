@@ -186,7 +186,7 @@ void write_to_file(FILE* r_w_stream, FILE_ID_TYPE id) {
                 break;
         }
     }
-    fprintf(stderr, "Buffer Overflow Error: (read_chars) buf is overflowed\n");
+    fprintf(stderr, "Buffer Overflow Error: (write_to_file) buf is overflowed\n");
     exit(EXIT_FAILURE);
 }
 
@@ -204,7 +204,7 @@ int get_port(FILE* stream) {
         case 4:
             return 1;
         default:
-            fprintf(stderr, "Read Error: (read_lines) fd is invalid\n");
+            fprintf(stderr, "File Descriptor Error: (get_port) fd is invalid\n");
             exit(EXIT_FAILURE);
     }
 }
@@ -239,7 +239,7 @@ void check_null(const char* ptr) {
  **********************************/
 void check_size(size_t to_size) {
     if (to_size <= 0) {
-        fprintf(stderr, "Read Error: (read_lines) to_size is 0 or negative\n");
+        fprintf(stderr, "Size Error: (check_size) to_size is 0 or negative\n");
         exit(EXIT_FAILURE);
     }
 }
