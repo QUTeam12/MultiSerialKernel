@@ -311,7 +311,7 @@ void out_no_newline_end(const int port, const char* buf, const unsigned int buf_
  * @param buf: 文字配列(の先頭アドレス)
  * @param buf_size: 文字配列のサイズ
  **********************************/
-void input(const char* buf, const unsigned int buf_size) {
+void input(const char* buf, size_t buf_size) {
     check_null(buf);
     if (fgets(buf, buf_size, stdin) == NULL) {
         fprintf(stderr, "Input Error: (input) fgets is failed\n");
