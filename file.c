@@ -34,7 +34,6 @@ void init_file_table() {
     for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
         memset(&file_table[id], 0, sizeof(FILE_ENTRY));  // FILE_ENTRYのメモリを0で埋める
         file_table[id].size = UNDEFINED_SIZE;
-        // file_table[id].buffer = NULL;
         file_table[id].semaphore_id = id;
     }
 }
