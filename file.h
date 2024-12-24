@@ -19,8 +19,7 @@ typedef unsigned int FILE_ID_TYPE;
 typedef struct {
         char name[16 + 1];  // ファイル名(確保するバイトに終端文字\0を含むため17バイトで16文字まで)
         int size;           // ファイルサイズ
-        char buffer[257];   // ファイルデータ
-        // char* buffer;       // ファイルデータのポインタ
+        char buffer[256 + 1];   // ファイルデータ
         int semaphore_id;  // 排他制御用セマフォID
 } FILE_ENTRY;
 
@@ -36,9 +35,9 @@ void copy_string(const char* from, char* to, size_t to_size);
 void rm(const char* filename, FILE* w_stream);
 FILE_ID_TYPE search_file_id(const char* filename);
 void edit(const char* filename, FILE* r_w_stream);
-void write_mode(FILE* r_w_stream, FILE_ID_TYPE id);
+void write_mode(FILE* r_w_stream, FILE_ID_TYPE id, const unsigned int is_backline);
 void read_mode(FILE* r_w_stream, FILE_ID_TYPE id);
 int get_port(FILE* stream);
 void out_no_newline_end(int port, const char* buf, const unsigned int buf_size);
-void input(char* buf, size_t buf_size);
+void input(const char* buf, size_t buf_size);
 void check_null(const char* ptr);

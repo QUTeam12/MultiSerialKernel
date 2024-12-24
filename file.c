@@ -1,7 +1,7 @@
 #include "file.h"
 
 #include <stddef.h>  // NULL, size_t
-#include <stdio.h>   // FILE, fileno // TODO: fflush必要な気がする
+#include <stdio.h>   // FILE, fileno
 #include <stdlib.h>  // EXIT_FAILURE, exit
 #include <string.h>  // memset, strcpy, strncpy, strlen, strcmp
 
@@ -14,6 +14,7 @@ FILE_ENTRY file_table[NUM_FILE];  // TODO: タスク共通になっているか�
  * @param w_stream: 書き込み対応ファイルストリーム
  **********************************/
 void print_file_table(FILE* w_stream) {
+	fprintf(w_stream, "\n:File Table:\n");
     for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
         fprintf(
             w_stream,
@@ -51,19 +52,22 @@ void select_command(FILE* r_w_stream) {
             fprintf(r_w_stream, "Please input a filename(16 characters).\n");
             input(filename, sizeof(filename));
             touch(filename, r_w_stream);
+			print_file_table(r_w_stream); // TODO: debug
             break;
         case 'r':
             fprintf(r_w_stream, "Please input the name of the file you wanna delete.\n");
             input(filename, sizeof(filename));
             rm(filename, r_w_stream);
+			print_file_table(r_w_stream); // TODO: debug
             break;
         case 'e':
             fprintf(r_w_stream, "Please input the name of the file you wanna edit.\n");
             input(filename, sizeof(filename));
             edit(filename, r_w_stream);
+			print_file_table(r_w_stream); // TODO: debug
             break;
         default:
-            fprintf(r_w_stream, "Invalid Command. Please push again.\n");
+            fprintf(r_w_stream, "\nInvalid Command. Please push again.\n");
     }
 }
 
@@ -74,18 +78,23 @@ void select_command(FILE* r_w_stream) {
  **********************************/
 void touch(const char* filename, FILE* w_stream) {
     check_null(filename);
+	if (filename[0] == '\0') {
+		fprintf(w_stream, "\nThe filename is empty. Please type again.\n");
+		return;
+	}
     for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
         if (strcmp(file_table[id].name, filename) == 0) {
-            fprintf(w_stream, "The file already exists. Please type another name.\n");
+            fprintf(w_stream, "\nThe file already exists. Please type another name.\n");
             return;
         }
         if (file_table[id].name[0] == '\0') {
             copy_string(filename, file_table[id].name, sizeof(file_table[id].name));
             file_table[id].size = 0;
+			fprintf(w_stream, "\nThe file was created.\n");
             return;
         }
     }
-    fprintf(w_stream, "File Table is Full. Please delete some files.\n");
+    fprintf(w_stream, "\nFile Table is Full. Please delete some files.\n");
 }
 
 /***********************************
@@ -112,14 +121,20 @@ void copy_string(const char* from, char* to, size_t to_size) {
  **********************************/
 void rm(const char* filename, FILE* w_stream) {
     check_null(filename);
+	if (filename[0] == '\0') {
+		fprintf(w_stream, "\nThe filename is empty. Please type again.\n");
+		return;
+	}
     FILE_ID_TYPE id = search_file_id(filename);
     if (id == -1) {
-        fprintf(w_stream, "File Not Found\n");
+        fprintf(w_stream, "\nFile Not Found\n");
         return;
     }
     if (strcmp(file_table[id].name, filename) == 0) {
         memset(&file_table[id], 0, sizeof(FILE_ENTRY));
         file_table[id].size = UNDEFINED_SIZE;
+		file_table[id].semaphore_id = id;
+		fprintf(w_stream, "\nThe file was deleted.\n");
     }
 }
 
@@ -145,13 +160,17 @@ FILE_ID_TYPE search_file_id(const char* filename) {
  **********************************/
 void edit(const char* filename, FILE* r_w_stream) {
     check_null(filename);
+	if (filename[0] == '\0') {
+		fprintf(r_w_stream, "\nThe filename is empty. Please type again.\n");
+		return;
+	}
     FILE_ID_TYPE id = search_file_id(filename);
     if (id == -1) {
-        fprintf(r_w_stream, "File Not Found\n");
+        fprintf(r_w_stream, "\nFile Not Found\n");
         return;
     }
     if (strcmp(file_table[id].name, filename) == 0) {
-        write_mode(r_w_stream, id);
+        write_mode(r_w_stream, id, 0);
     }
 }
 
@@ -159,13 +178,16 @@ void edit(const char* filename, FILE* r_w_stream) {
  * @brief 入力をファイルテーブル内の指定したファイルに書き込む
  * @param r_w_stream: 読み書き対応ファイルストリーム
  * @param id: ファイルテーブルのインデックス
+ * @param is_backline: 改行削除後のwriteかどうか。本当は関数設計的に良くないので消したい。
  **********************************/
-void write_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
+void write_mode(FILE* r_w_stream, FILE_ID_TYPE id, const unsigned int is_backline) {
     const int port = get_port(r_w_stream);
     char* buf = file_table[id].buffer;
     const int file_size = file_table[id].size;
     const int semaphore_id = file_table[id].semaphore_id;
-    P(semaphore_id);
+	if (is_backline == 1) {
+    	P(semaphore_id);
+	}
     fprintf(r_w_stream, "\n\n:Write Mode: You can edit a file.\n");
     fprintf(r_w_stream, "If you wanna change to Command Mode, Please push [Esc].\n\n");
 
@@ -174,7 +196,7 @@ void write_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
         i = file_size;
         out_no_newline_end(port, buf, file_size);  // fprintfを使うと\nをつけなければならなくなり途中からの編集ができない
     }
-    for (unsigned int i = 0; i < sizeof(file_table[id].buffer); i++) {
+    for (i; i < sizeof(file_table[id].buffer); i++) {
         char c = inbyte(port);
         switch (c) {
             case '\r':  // CRの場合
@@ -182,14 +204,13 @@ void write_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
                 outbyte(port, '\r');
                 outbyte(port, '\n');
                 *(buf + i) = '\n';
+				break;
             case '\x1b':  // Escの場合
                 fprintf(r_w_stream, "\n\n:Command Mode: You have some options.\n");
                 fprintf(r_w_stream, "[Enter] Finish editing\n");
                 fprintf(r_w_stream, "[w] Restart Write Mode\n");
                 fprintf(r_w_stream, "[r] Read Mode\n");
-                // from
                 while (1) {
-                    unsigned int is_command_ended = 0;
                     switch (inbyte(port)) {
                         case '\r':
                         case '\n':
@@ -197,10 +218,11 @@ void write_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
                             file_table[id].size = i;
                             return;
                         case 'w':
-                            fprintf(r_w_stream, "\n\n:Write Mode: You can edit a file.\n");
+                            V(semaphore_id);
                             i--;
-                            is_command_ended = 1;
-                            break;
+                            file_table[id].size = i;
+							write_mode(r_w_stream, id, 0);
+							return;
                         case 'r':
                             V(semaphore_id);
                             file_table[id].size = i;
@@ -209,20 +231,31 @@ void write_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
                         default:
                             fprintf(r_w_stream, "Invalid Command. Please push again.\n");
                     }
-                    if (is_command_ended) {
-                        break;
-                    }
                 }
-                // to
+				break;
             case '\x7f':  // バックスペースの場合
                 if (i > 0) {
+					i--;
+					if (*(buf + i) == '\n') { // 動作が不安定 // TODO: 2回目の改行消しで停止
+                		*(buf + i) = '\0'; // readにはないがreadの外で\nの後に多分実装されている
+                        file_table[id].size = i;
+						write_mode(r_w_stream, id, 1); // outbyteだけでは一行上に干渉できない
+						return;
+					}
+                	*(buf + i) = '\0';
                     outbyte(port, '\x8');
                     outbyte(port, ' ');
                     outbyte(port, '\x8');
-                    i--;
                 }
                 i--;
                 break;
+			case '\x9': // タブの場合
+				for (unsigned int j = 0; j < 4; j++) {
+                	*(buf + i) = ' ';
+					i++;
+                    outbyte(port, ' ');
+				}
+				break;
             default:  // 通常文字の場合
                 outbyte(port, c);
                 *(buf + i) = c;
@@ -264,7 +297,7 @@ void read_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
         char c = inbyte_or(get_port(r_w_stream));  // 一定時間入力がない場合0を返す
         if (c == '\x1b') {
             fprintf(r_w_stream, "Waiting for Write Mode...\n");
-            write_mode(r_w_stream, id);
+            write_mode(r_w_stream, id, 0);
             return;
         }
     }
@@ -300,6 +333,7 @@ void out_no_newline_end(const int port, const char* buf, const unsigned int buf_
         if (outbyte_c == '\n') {
             outbyte(port, '\r');
             outbyte(port, '\n');
+			continue;
         }
         outbyte(port, outbyte_c);
     }
@@ -316,7 +350,10 @@ void input(const char* buf, size_t buf_size) {
         fprintf(stderr, "Input Error: (input) fgets is failed\n");
         exit(EXIT_FAILURE);
     }
-    fflush(stdin);  // サイズを超えた入力を無視
+	char* newline = strchr(buf,'\n');
+	if (newline != NULL) {
+		*newline = '\0';
+	}
 }
 
 /***********************************
@@ -329,3 +366,4 @@ void check_null(const char* ptr) {
         exit(EXIT_FAILURE);
     }
 }
+
