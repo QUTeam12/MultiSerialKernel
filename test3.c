@@ -31,6 +31,8 @@ int player2_bet=0;
 int player1_tip_change=0;
 int player2_tip_change=0;
 
+int waiting=0;
+
 char result_char[1000];
 
 /* min_valからmax_valの範囲で整数の乱数を返す関数 */
@@ -258,34 +260,62 @@ void del_lines(FILE *port,int p){
 	}
 	fprintf(port,"\n");
 }
-void task_init(){
+void task_init2(){
+	P(0);
+	printf("taskinit\n");
 	P(1);
 	P(2);
-	P(3);
-	P(4);
+	V(0);
+	while(1){
+	}
 }
-
+volatile int nttask2;
+void task_init(){
+	while(1){
+		printf("task0-1st\n");
+		if(nttask2 ==3){
+			printf("task0\n");
+			nttask2=0;
+			for (int k=0;k<3;k++){
+				V(1);
+			}
+		
+		}
+		printf("skipmt\n");
+		skipmt();
+	}
+}
 void p1(){
+	P(0);
+	V(0);
 	FILE *port=com0out;
         char s[256];
         fprintf(port,"This is BlackJack Game. Input something to start!\n");
         scanf("%s",s);
 	del_lines(port,2);
 	fprintf(port,"Waiting for player2 to start......\n");
-	V(2);
-	P(1);
+	P(0);
+	waiting++;
+	V(0);
+	while(waiting!=2){
+		//二人が待機状態になるまで待つ
+	}
 	while(1){
 		printf("your score:$%d\nHow many tips do you want to bet? 1 tip=$10 \n",player1_tip);
         	scanf("%d", &player1_bet);
         	player1_bet=player1_bet*10;
-		V(2);
-		P(1);
+		waiting++;
+		while(waiting!=2){
+			//二人が待機状態になるまで待つ
+		}
         	printf("player1 bet $%d and player2 bet $%d\n",player1_bet,player2_bet);
 	
 	}
 }
 
 void p2(){
+	P(0);
+	V(0);
         FILE *port=com1out;
 	FILE *sport=com1in;
         char s[256];
@@ -293,11 +323,18 @@ void p2(){
         fscanf(sport,"%s",s);
         del_lines(sport,2);
         fprintf(port,"Waiting for player1 to start......\n");
-        V(1);
-        P(2);
+	P(0);
+	waiting++;
+	V(0);
+	while(waiting!=2){
+		//二人が待機状態になるまで待つ
+	}
+	while(waiting!=0){
+		//waitingがリセットされるまで待つ
+	}
         while(1){
                 printf("your score:$%d\nHow many tips do you want to bet? 1 tip=$10 \n",player2_tip);
-                scanf(sport,"%d", &player2_bet);
+                fscanf(sport,"%d", &player2_bet);
                 player2_bet=player2_bet*10;
                 V(1);
                 P(2);
