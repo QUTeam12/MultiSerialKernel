@@ -1,4 +1,4 @@
-#define TEST2
+#define MAIN
 #include "mtk_c.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -172,7 +172,7 @@ void print_results(FILE *port){
 	}else if((dealer_score>21 && player1_score>21) || dealer_score==player1_score){
 		//引き分け
 		fprintf(port,"player1 push!\n");
-	}else if((dealer_score>21 && player1_score<=21)||(player1_score>dealer_score)){
+        }else if((dealer_score>21 && player1_score<=21) || (player1_score>dealer_score && player1_score<=21)){
 	       	//プレイヤーの勝ち
 		fprintf(port,"Player1 win $%d\n",player1_bet);
 		player1_tip+=player1_bet;
@@ -180,7 +180,29 @@ void print_results(FILE *port){
 		//プレイヤーの負け
 		fprintf(port,"Player1 lose $%d\n",player1_bet);
 		player1_tip-=player1_bet;
+	
 	}
+	/*-----------------player2の判定----------------------*/
+	if(player2_bj>dealer_bj){
+                //Black Jack
+                fprintf(port,"Player 2: Blackjack! Player2 win 2.5 times your bet!\nPlayer2 won $%d\n",(int)2.5*player2_bet);
+                player2_tip+=(int)2.5*player2_bet;
+        }else if(player2_bj<dealer_bj){
+                fprintf(port, "Dealer: Blackjack! Player2 lose $%d\n",player2_bet);
+                player2_tip-=player2_bet;
+        }else if((dealer_score>21 && player2_score>21) || dealer_score==player2_score){
+                //引き分け
+                fprintf(port,"player2 push!\n");
+        }else if((dealer_score>21 && player2_score<=21) || (player2_score>dealer_score && player2_score<=21)){
+                //プレイヤーの勝ち
+                fprintf(port,"Player2 win $%d\n",player2_bet);
+                player2_tip+=player2_bet;
+        }else{
+                //プレイヤーの負け
+                fprintf(port,"Player2 lose $%d\n",player2_bet);
+                player2_tip-=player2_bet;
+        }
+
 }
 
        			       
@@ -188,7 +210,6 @@ void print_results(FILE *port){
 void task1(){
 	while(1){
 		char s0[256];
-		char s1[256];
 		printf("This is BlackJack Game. Input s to start!\n");
 		scanf("%s",s0);
 		trump_init();
@@ -269,77 +290,148 @@ void task_init2(){
 	while(1){
 	}
 }
-volatile int nttask2;
+volatile int nttask;
 void task_init(){
 	while(1){
-		printf("task0-1st\n");
-		if(nttask2 ==3){
-			printf("task0\n");
-			nttask2=0;
-			for (int k=0;k<3;k++){
-				V(1);
-			}
-		
+	if(nttask == 2){
+		nttask = 0;
+		printf("task_init\n");
+		for (int k = 0; k < 2; k++){
+			V(1);
 		}
-		printf("skipmt\n");
-		skipmt();
+	}
 	}
 }
+
 void p1(){
-	P(0);
-	V(0);
 	FILE *port=com0out;
+	FILE *sport=com0in;
         char s[256];
-        fprintf(port,"This is BlackJack Game. Input something to start!\n");
+        fprintf(port,"This is BlackJack Game. You are player1. Input something to start!\n");
         scanf("%s",s);
 	del_lines(port,2);
 	fprintf(port,"Waiting for player2 to start......\n");
-	P(0);
-	waiting++;
-	V(0);
-	while(waiting!=2){
-		//二人が待機状態になるまで待つ
-	}
+	P(0);nttask++;V(0);
+	P(1);
 	while(1){
-		printf("your score:$%d\nHow many tips do you want to bet? 1 tip=$10 \n",player1_tip);
-        	scanf("%d", &player1_bet);
+		fprintf(port,"your score:$%d How many tips do you want to bet? 1tip=$10 \n",player1_tip);
+        	fscanf(sport,"%d", &player1_bet);
         	player1_bet=player1_bet*10;
-		waiting++;
-		while(waiting!=2){
-			//二人が待機状態になるまで待つ
-		}
-        	printf("player1 bet $%d and player2 bet $%d\n",player1_bet,player2_bet);
-	
+		fprintf(port,"Waiting for player2 to bet\n");
+		P(0);nttask++;V(0);
+		P(1);
+        	fprintf(port,"player1 bet $%d and player2 bet $%d\n",player1_bet,player2_bet);
+		trump_init();
+		player1_trumps[0]=draw_trump();
+                player2_trumps[0]=draw_trump();
+                dealer_trumps[0]=draw_trump();
+                player1_trumps[1]=draw_trump();
+                player2_trumps[1]=draw_trump();
+                dealer_trumps[1]=draw_trump();
+                player1_index=2;
+                player2_index=2;
+		P(0);nttask++;V(0);
+		P(1);
+		int is_stand=0;
+		while(! is_stand){
+			print_table(port,0);
+			fprintf(port,"HIT:type h,STAND:type s,DOUBLE:type d\n");
+			fscanf(sport,"%s",s);
+			if(s[0] == 'h'){
+				if(player1_index>=10){
+					fprintf(port,"no more hit\n");
+					is_stand=1;
+					break;
+				}else{
+					player1_trumps[player1_index]=draw_trump();
+					player1_index++;
+					//printf("\033[4A\r");  // 4行上に移動して行の先頭へ
+					//print_table(com0out,0);
+				}
+			}else if(s[0] == 'd'){
+				if(player1_index>=10){
+					fprintf(port,"no more hit\n");
+					is_stand=1;
+					break;
+				}else{
+					player1_trumps[player1_index]=draw_trump();
+					player1_index++;
+					//printf("\033[4A\r");  // 4行上に移動して行の先頭へ
+					print_table(port,0);
+					player1_bet=player1_bet*2;
+				}
+				is_stand=1;
+				break;
+			}else if(s[0] == 's'){
+				is_stand=1;
+			}
+		}//選択終わり
+		P(0);nttask++;V(0);
+                P(1);
+		dealer_score=dealer_turn();
+                player1_score=cal_score(player1_trumps,player1_index);
+                player2_score=cal_score(player2_trumps,player2_index);
+                print_results(com0out);
+                print_results(com1out);
 	}
 }
 
 void p2(){
-	P(0);
-	V(0);
         FILE *port=com1out;
 	FILE *sport=com1in;
         char s[256];
-        fprintf(port,"This is BlackJack Game. Input something to start!\n");
+        fprintf(port,"This is BlackJack Game. You are player2. Input something to start!\n");
         fscanf(sport,"%s",s);
         del_lines(sport,2);
         fprintf(port,"Waiting for player1 to start......\n");
-	P(0);
-	waiting++;
-	V(0);
-	while(waiting!=2){
-		//二人が待機状態になるまで待つ
-	}
-	while(waiting!=0){
-		//waitingがリセットされるまで待つ
-	}
+	P(0);nttask++;V(0);
+	P(1);
         while(1){
-                printf("your score:$%d\nHow many tips do you want to bet? 1 tip=$10 \n",player2_tip);
+                fprintf(port,"your score:$%d\nHow many tips do you want to bet? 1 tip=$10 \n",player2_tip);
                 fscanf(sport,"%d", &player2_bet);
                 player2_bet=player2_bet*10;
-                V(1);
-                P(2);
-                printf("player1 bet $%d and player2 bet $%d\n",player1_bet,player2_bet);
-
+		fprintf(port,"Waiting for player1 to bet\n");
+		P(0);nttask++;V(0);
+		P(1);
+                fprintf(port,"player1 bet $%d and player2 bet $%d\n",player1_bet,player2_bet);
+		P(0);nttask++;V(0);
+		P(1);
+		int is_stand=0;
+		while(! is_stand){
+			print_table(port,0);
+			fprintf(port,"HIT:type h,STAND:type s,DOUBLE:type d\n");
+			fscanf(sport,"%s",s);
+			if(s[0] == 'h'){
+				if(player2_index>=10){
+					fprintf(port,"no more hit\n");
+					is_stand=1;
+					break;
+				}else{
+					player2_trumps[player2_index]=draw_trump();
+					player2_index++;
+					//printf("\033[4A\r");  // 4行上に移動して行の先頭へ
+					//print_table(com0out,0);
+				}
+			}else if(s[0] == 'd'){
+				if(player2_index>=10){
+					fprintf(port,"no more hit\n");
+					is_stand=1;
+					break;
+				}else{
+					player2_trumps[player2_index]=draw_trump();
+					player2_index++;
+					//printf("\033[4A\r");  // 4行上に移動して行の先頭へ
+					print_table(port,0);
+					player2_bet=player2_bet*2;
+				}
+				is_stand=1;
+				break;
+			}else if(s[0] == 's'){
+				is_stand=1;
+			}
+		}//選択終わり
+		P(0);nttask++;V(0);
+                P(1);
         }
 }
 
@@ -359,6 +451,9 @@ void setfd(){
 int main(){
 	setfd();	
 	init_kernel();
+	semaphore[0].count=1;
+	semaphore[1].count=0;
+	nttask=0;
 	set_task(task_init);
 	set_task(p1);
 	set_task(p2);
