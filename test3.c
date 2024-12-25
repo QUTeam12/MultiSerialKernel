@@ -149,12 +149,13 @@ void cal_bj(){
 }
 
 void print_results(FILE *port){
+	
 	dealer_score=dealer_turn();
 	player1_score=cal_score(player1_trumps,player1_index);
 	player2_score=cal_score(player2_trumps,player2_index);
 	cal_bj();
 	//printf("\033[4A\r");  // 4行上に移動して行の先頭へ
-	
+	fprintf(port,"player1 tip:$%d,player2 tip:$%d\n",player1_tip,player2_tip);
 	fprintf(port,"---------------results---------------------\n");
 	print_table(port,1);
 	fprintf(port,"--------score--results---------------------\n");
@@ -165,42 +166,43 @@ void print_results(FILE *port){
 	if(player1_bj>dealer_bj){
 		//Black Jack
 		fprintf(port,"Player 1: Blackjack! Player1 win 2.5 times your bet!\nPlayer1 won $%d\n",(int)2.5*player1_bet);
-		player1_tip+=(int)2.5*player1_bet;
+		player1_tip_change=(int)2.5*player1_bet;
 	}else if(player1_bj<dealer_bj){
 		fprintf(port, "Dealer: Blackjack! Player1 lose $%d\n",player1_bet);
-		player1_tip-=player1_bet;
-	}else if((dealer_score>21 && player1_score>21) || dealer_score==player1_score){
+		player1_tip_change=-1*player1_bet;
+	}else if((dealer_score>21 && player1_score>21) || (dealer_score==player1_score && dealer_index ==player1_index)){
 		//引き分け
 		fprintf(port,"player1 push!\n");
-        }else if((dealer_score>21 && player1_score<=21) || (player1_score>dealer_score && player1_score<=21)){
+		player1_tip_change=0;
+        }else if((dealer_score>21 && player1_score<=21) ||(player1_score>dealer_score && player1_score<=21) || (player1_score==dealer_score && player1_index<dealer_index)){
 	       	//プレイヤーの勝ち
 		fprintf(port,"Player1 win $%d\n",player1_bet);
-		player1_tip+=player1_bet;
+		player1_tip_change=player1_bet;
 	}else{
 		//プレイヤーの負け
 		fprintf(port,"Player1 lose $%d\n",player1_bet);
-		player1_tip-=player1_bet;
+		player1_tip_change=-1*player1_bet;
 	
 	}
 	/*-----------------player2の判定----------------------*/
 	if(player2_bj>dealer_bj){
                 //Black Jack
                 fprintf(port,"Player 2: Blackjack! Player2 win 2.5 times your bet!\nPlayer2 won $%d\n",(int)2.5*player2_bet);
-                player2_tip+=(int)2.5*player2_bet;
+                player2_tip_change=(int)1.5*player2_bet;
         }else if(player2_bj<dealer_bj){
                 fprintf(port, "Dealer: Blackjack! Player2 lose $%d\n",player2_bet);
-                player2_tip-=player2_bet;
-        }else if((dealer_score>21 && player2_score>21) || dealer_score==player2_score){
+                player2_tip_change=-1*player2_bet;
+	}else if((dealer_score>21 && player2_score>21) || (dealer_score==player2_score && dealer_index ==player2_index)){
                 //引き分け
                 fprintf(port,"player2 push!\n");
-        }else if((dealer_score>21 && player2_score<=21) || (player2_score>dealer_score && player2_score<=21)){
+        }else if((dealer_score>21 && player2_score<=21) ||(player2_score>dealer_score && player2_score<=21) || (player2_score==dealer_score && player2_index<dealer_index)){
                 //プレイヤーの勝ち
                 fprintf(port,"Player2 win $%d\n",player2_bet);
-                player2_tip+=player2_bet;
+                player2_tip_change=player2_bet;
         }else{
                 //プレイヤーの負け
                 fprintf(port,"Player2 lose $%d\n",player2_bet);
-                player2_tip-=player2_bet;
+                player2_tip_change=-1*player2_bet;
         }
 
 }
@@ -281,21 +283,11 @@ void del_lines(FILE *port,int p){
 	}
 	fprintf(port,"\n");
 }
-void task_init2(){
-	P(0);
-	printf("taskinit\n");
-	P(1);
-	P(2);
-	V(0);
-	while(1){
-	}
-}
 volatile int nttask;
 void task_init(){
 	while(1){
 	if(nttask == 2){
 		nttask = 0;
-		printf("task_init\n");
 		for (int k = 0; k < 2; k++){
 			V(1);
 		}
@@ -317,7 +309,7 @@ void p1(){
 		fprintf(port,"your score:$%d How many tips do you want to bet? 1tip=$10 \n",player1_tip);
         	fscanf(sport,"%d", &player1_bet);
         	player1_bet=player1_bet*10;
-		fprintf(port,"Waiting for player2 to bet\n");
+		fprintf(port,"Waiting for player2 to bet..........\n");
 		P(0);nttask++;V(0);
 		P(1);
         	fprintf(port,"player1 bet $%d and player2 bet $%d\n",player1_bet,player2_bet);
@@ -366,6 +358,7 @@ void p1(){
 				is_stand=1;
 			}
 		}//選択終わり
+		fprintf(port,"waiting for player2 to ready......\n");
 		P(0);nttask++;V(0);
                 P(1);
 		dealer_score=dealer_turn();
@@ -373,6 +366,11 @@ void p1(){
                 player2_score=cal_score(player2_trumps,player2_index);
                 print_results(com0out);
                 print_results(com1out);
+		player1_tip=player1_tip+player1_tip_change;
+		player2_tip=player2_tip+player2_tip_change;
+		P(0);nttask++;V(0);
+                P(1);
+
 	}
 }
 
@@ -390,7 +388,7 @@ void p2(){
                 fprintf(port,"your score:$%d\nHow many tips do you want to bet? 1 tip=$10 \n",player2_tip);
                 fscanf(sport,"%d", &player2_bet);
                 player2_bet=player2_bet*10;
-		fprintf(port,"Waiting for player1 to bet\n");
+		fprintf(port,"Waiting for player1 to bet.......\n");
 		P(0);nttask++;V(0);
 		P(1);
                 fprintf(port,"player1 bet $%d and player2 bet $%d\n",player1_bet,player2_bet);
@@ -430,6 +428,9 @@ void p2(){
 				is_stand=1;
 			}
 		}//選択終わり
+		fprintf(port,"waiting for player1 to ready......\n");
+		P(0);nttask++;V(0);
+                P(1);
 		P(0);nttask++;V(0);
                 P(1);
         }
