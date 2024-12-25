@@ -129,7 +129,7 @@ TASK_ID_TYPE removeq(TASK_ID_TYPE* pointer) {
  * @param ch: チャンネルだがセマフォIDとしてよい
  * @author 宗藤
  **********************************/
-void sleep(int ch) {
+void sleep_task(int ch) {
     addq(&semaphore[ch].task_list, curr_task);  // セマフォにcurr_taskを追加
     sched();
     swtch();
@@ -140,7 +140,7 @@ void sleep(int ch) {
  * @param ch: チャンネルだがセマフォIDとしてよい
  * @author 宗藤
  **********************************/
-void wakeup(int ch) {
+void wakeup_task(int ch) {
     TASK_ID_TYPE task = removeq(&semaphore[ch].task_list);  // task = セマフォから取り出したタスク
     if (task != NULLTASKID) {
         addq(&ready, task);  // readyにtaskを追加
@@ -156,7 +156,7 @@ void p_body(TASK_ID_TYPE semaphoreId) {
     semaphore[semaphoreId].count -= 1;  // セマフォの値を減らす
     if (semaphore[semaphoreId].count < 0) {
         // タスクを休眠状態に
-        sleep(semaphoreId);
+        sleep_task(semaphoreId);
     }
 }
 
@@ -168,7 +168,7 @@ void p_body(TASK_ID_TYPE semaphoreId) {
 void v_body(TASK_ID_TYPE semaphoreId) {
     semaphore[semaphoreId].count += 1;
     if (semaphore[semaphoreId].count <= 0) {
-        wakeup(semaphoreId);
+        wakeup_task(semaphoreId);
     }
 }
 

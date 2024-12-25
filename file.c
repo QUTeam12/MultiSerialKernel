@@ -7,7 +7,9 @@
 
 #include "mtk_c.h"
 
-FILE_ENTRY file_table[NUM_FILE];  // TODO: タスク共通になっているかどうか
+FILE_ENTRY file_table[NUM_FILE];
+
+extern SEMAPHORE_TYPE semaphore[NUMSEMAPHORE];
 
 /***********************************
  * @brief ファイルテーブルのデバッグ
@@ -50,19 +52,19 @@ void select_command(FILE* r_w_stream) {
     switch (inbyte(get_port(r_w_stream))) {
         case 't':
             fprintf(r_w_stream, "Please input a filename(16 characters).\n");
-            input(filename, sizeof(filename));
+            input(filename, sizeof(filename), r_w_stream);
             touch(filename, r_w_stream);
 			print_file_table(r_w_stream); // TODO: debug
             break;
         case 'r':
             fprintf(r_w_stream, "Please input the name of the file you wanna delete.\n");
-            input(filename, sizeof(filename));
+            input(filename, sizeof(filename), r_w_stream);
             rm(filename, r_w_stream);
 			print_file_table(r_w_stream); // TODO: debug
             break;
         case 'e':
             fprintf(r_w_stream, "Please input the name of the file you wanna edit.\n");
-            input(filename, sizeof(filename));
+            input(filename, sizeof(filename), r_w_stream);
             edit(filename, r_w_stream);
 			print_file_table(r_w_stream); // TODO: debug
             break;
@@ -126,7 +128,7 @@ void rm(const char* filename, FILE* w_stream) {
 		return;
 	}
     FILE_ID_TYPE id = search_file_id(filename);
-    if (id == -1) {
+	if (id == -1) {
         fprintf(w_stream, "\nFile Not Found\n");
         return;
     }
@@ -181,84 +183,74 @@ void edit(const char* filename, FILE* r_w_stream) {
  * @param is_backline: 改行削除後のwriteかどうか。本当は関数設計的に良くないので消したい。
  **********************************/
 void write_mode(FILE* r_w_stream, FILE_ID_TYPE id, const unsigned int is_backline) {
-    const int port = get_port(r_w_stream);
-    char* buf = file_table[id].buffer;
-    const int file_size = file_table[id].size;
     const int semaphore_id = file_table[id].semaphore_id;
-	if (is_backline == 1) {
+	if (is_backline == 0) {
+		if (semaphore[semaphore_id].count == 0) {
+			read_mode(r_w_stream, id);
+			return;
+		}
     	P(semaphore_id);
 	}
     fprintf(r_w_stream, "\n\n:Write Mode: You can edit a file.\n");
     fprintf(r_w_stream, "If you wanna change to Command Mode, Please push [Esc].\n\n");
+    const unsigned int port = get_port(r_w_stream);
+    char* buf = file_table[id].buffer;
+	unsigned int file_size = file_table[id].size;	
+	out_no_newline_end(port, buf, file_size);
 
-    unsigned int i = 0;
-    if (file_size != 0) {  // 新規ファイルでない場合
-        i = file_size;
-        out_no_newline_end(port, buf, file_size);  // fprintfを使うと\nをつけなければならなくなり途中からの編集ができない
-    }
-    for (i; i < sizeof(file_table[id].buffer); i++) {
+    for (file_table[id].size; file_table[id].size < sizeof(file_table[id].buffer); file_table[id].size++) {
         char c = inbyte(port);
         switch (c) {
             case '\r':  // CRの場合
             case '\n':  // LFの場合
                 outbyte(port, '\r');
                 outbyte(port, '\n');
-                *(buf + i) = '\n';
+                *(buf + file_table[id].size) = '\n';
 				break;
             case '\x1b':  // Escの場合
-                fprintf(r_w_stream, "\n\n:Command Mode: You have some options.\n");
+                fprintf(r_w_stream, "\n\n:Command Mode: You have two options.\n");
                 fprintf(r_w_stream, "[Enter] Finish editing\n");
                 fprintf(r_w_stream, "[w] Restart Write Mode\n");
-                fprintf(r_w_stream, "[r] Read Mode\n");
                 while (1) {
                     switch (inbyte(port)) {
                         case '\r':
                         case '\n':
                             V(semaphore_id);
-                            file_table[id].size = i;
                             return;
                         case 'w':
                             V(semaphore_id);
-                            i--;
-                            file_table[id].size = i;
 							write_mode(r_w_stream, id, 0);
 							return;
-                        case 'r':
-                            V(semaphore_id);
-                            file_table[id].size = i;
-                            read_mode(r_w_stream, id);
-                            return;
                         default:
                             fprintf(r_w_stream, "Invalid Command. Please push again.\n");
                     }
                 }
 				break;
             case '\x7f':  // バックスペースの場合
-                if (i > 0) {
-					i--;
-					if (*(buf + i) == '\n') { // 動作が不安定 // TODO: 2回目の改行消しで停止
-                		*(buf + i) = '\0'; // readにはないがreadの外で\nの後に多分実装されている
-                        file_table[id].size = i;
+                if (file_table[id].size > 0) {
+					file_table[id].size--;
+					if (*(buf + file_table[id].size) == '\n') {
+                		*(buf + file_table[id].size) = '\0'; // readにはないがreadの外で\nの後に多分実装されている
 						write_mode(r_w_stream, id, 1); // outbyteだけでは一行上に干渉できない
 						return;
 					}
-                	*(buf + i) = '\0';
+                	*(buf + file_table[id].size) = '\0';
                     outbyte(port, '\x8');
                     outbyte(port, ' ');
                     outbyte(port, '\x8');
                 }
-                i--;
+                file_table[id].size--;
                 break;
 			case '\x9': // タブの場合
 				for (unsigned int j = 0; j < 4; j++) {
-                	*(buf + i) = ' ';
-					i++;
+                	*(buf + file_table[id].size) = ' ';
+					file_table[id].size++;
                     outbyte(port, ' ');
 				}
 				break;
             default:  // 通常文字の場合
                 outbyte(port, c);
-                *(buf + i) = c;
+                *(buf + file_table[id].size) = c;
                 break;
         }
     }
@@ -272,34 +264,21 @@ void write_mode(FILE* r_w_stream, FILE_ID_TYPE id, const unsigned int is_backlin
  * @param id: ファイルテーブルのインデックス
 **********************************/
 void read_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
-    fprintf(r_w_stream, "\n\n:Read Mode: You can see the content of a file even if someone else is editing.\n");
-    fprintf(r_w_stream, "If you wanna switch to Write Mode, Please push [Esc].\n");
-    fprintf(r_w_stream, "#Attention# The user in Write mode is only one by a file.\n");
-    fprintf(r_w_stream, "If someone else is in Write Mode, you switch to Wait Mode.\n\n");
-
-    const char* buf = file_table[id].buffer;
     const int semaphore_id = file_table[id].semaphore_id;
-    fprintf(r_w_stream, "%s\n", buf);
-
     while (1) {
-        // TODO: 多分newline数える段階のbufが前の状態じゃないといけないからうまく上書きできない・sleepでうまくタイムラグもいれたい
-        unsigned int newline_count = 0;
-        for (unsigned int i = 0; i < strlen(buf); i++) {
-            if (*(buf + i) == '\n') {
-                newline_count++;
-            }
-        }
-        fprintf(r_w_stream, "\033[1A\r");  // \033で特別な制御命令の待機を示し、[1Aで1行上に移動
-        for (unsigned int i = 0; i < newline_count; i++) {
-            fprintf(r_w_stream, "\033[1A\r");
-        }
-        fprintf(r_w_stream, "%s\n", buf);
-        char c = inbyte_or(get_port(r_w_stream));  // 一定時間入力がない場合0を返す
-        if (c == '\x1b') {
-            fprintf(r_w_stream, "Waiting for Write Mode...\n");
-            write_mode(r_w_stream, id, 0);
-            return;
-        }
+		if (semaphore[semaphore_id].count == 1) {
+			write_mode(r_w_stream, id, 0);
+			break;
+		}
+    	fprintf(r_w_stream, "\n\n:Read Mode: Someone else is in Write Mode. So you need to wait.\n");
+    	fprintf(r_w_stream, "You can see the content of a file even if someone else is editing.\n");
+    	fprintf(r_w_stream, "#Attention# The user in Write mode is only one by a file.\n");
+    	fprintf(r_w_stream, "If someone else switch from Write Mode, you switch to it.\n\n");
+		const char* buf = file_table[id].buffer;
+		// fprintf(r_w_stream, "aiueo\nkakikukeko\n");
+		// fprintf(r_w_stream, "%s\n", buf);
+		out_no_newline_end(get_port(r_w_stream), file_table[id].buffer, file_table[id].size);
+		sleep(r_w_stream, 3);
     }
 }
 
@@ -307,7 +286,7 @@ void read_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
  * @brief ストリームのファイルディスクリプタからポートを返す
  * @param stream: ファイルストリーム
 **********************************/
-int get_port(FILE* stream) {
+unsigned int get_port(FILE* stream) {
     unsigned int fd = fileno(stream);
     switch (fd) {
         case 0:
@@ -343,10 +322,11 @@ void out_no_newline_end(const int port, const char* buf, const unsigned int buf_
  * @brief 入力を受け取る
  * @param buf: 文字配列(の先頭アドレス)
  * @param buf_size: 文字配列のサイズ
+ * @param r_stream: 読み込み対応ストリーム
  **********************************/
-void input(const char* buf, size_t buf_size) {
+void input(const char* buf, size_t buf_size, FILE* r_stream) {
     check_null(buf);
-    if (fgets(buf, buf_size, stdin) == NULL) {
+    if (fgets(buf, buf_size, r_stream) == NULL) {
         fprintf(stderr, "Input Error: (input) fgets is failed\n");
         exit(EXIT_FAILURE);
     }
@@ -367,3 +347,9 @@ void check_null(const char* ptr) {
     }
 }
 
+void sleep(unsigned int seconds) {
+    clock_t start_time = clock();
+    clock_t end_time = start_time + (seconds * CLOCKS_PER_SEC);
+    while (clock() < end_time) {
+    }
+}
