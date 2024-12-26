@@ -31,10 +31,7 @@ int player2_bet=0;
 int player1_tip_change=0;
 int player2_tip_change=0;
 
-int waiting=0;
-
-char result_char[1000];
-
+int round_num=1;
 /* min_valからmax_valの範囲で整数の乱数を返す関数 */
 int get_rand(int min_val, int max_val) {
     return (int)((rand() % (max_val+1 - min_val)) + min_val);
@@ -49,6 +46,7 @@ void shuffle(int* array, int size) {
         array[i] = array[r];
         array[r] = tmp;
     }
+    return;
 }
 int draw_trump(){
 	int trump_num=trump[trump_index];
@@ -64,9 +62,36 @@ void trump_init(){
 		}
 	}
 	srand(get_ms()); // 現在時刻の情報でrand初期化
-	printf("time:%u\n",get_ms());
 	shuffle(trump,deck*52);
 	return;
+}
+
+void reset_trump(){
+	dealer_index=0;
+	player1_index=0;
+	player2_index=0;
+	for(int i=0;i<10;i++){
+		dealer_trumps[i]=0;
+	}
+	for(int i=0;i<10;i++){
+		player1_trumps[i]=0;
+	}
+	for(int i=0;i<10;i++){
+		player2_trumps[i]=0;
+	}
+	player1_bet=0;
+	player2_bet=0;
+	dealer_bj =0;
+	player1_bj=0;
+	player2_bj=0;
+	dealer_score=0;
+	player1_score=0;
+	player2_score=0;
+	player1_double=0;
+	player2_double=0;
+	player1_tip_change=0;
+	player2_tip_change=0;
+
 }
 
 
@@ -146,6 +171,7 @@ void cal_bj(){
 	if(player2_score==21 && player2_index==2){
 		player2_bj=1;
 	}
+	return;
 }
 
 void print_results(FILE *port){
@@ -154,8 +180,6 @@ void print_results(FILE *port){
 	player1_score=cal_score(player1_trumps,player1_index);
 	player2_score=cal_score(player2_trumps,player2_index);
 	cal_bj();
-	//printf("\033[4A\r");  // 4行上に移動して行の先頭へ
-	fprintf(port,"player1 tip:$%d,player2 tip:$%d\n",player1_tip,player2_tip);
 	fprintf(port,"---------------results---------------------\n");
 	print_table(port,1);
 	fprintf(port,"--------score--results---------------------\n");
@@ -204,6 +228,7 @@ void print_results(FILE *port){
                 fprintf(port,"Player2 lose $%d\n",player2_bet);
                 player2_tip_change=-1*player2_bet;
         }
+	return;
 
 }
 
@@ -277,11 +302,12 @@ void task1(){
 
 void del_lines(FILE *port,int p){
 	fprintf(port,"\r");
-	for(int i=0;i<p;i++){
+	for(int i=0;i<p+1;i++){
 		fprintf(port,"                                                                                                               ");
 		fprintf(port,"\033[1A\r");
 	}
 	fprintf(port,"\n");
+	return;
 }
 volatile int nttask;
 void task_init(){
@@ -301,17 +327,21 @@ void p1(){
         char s[256];
         fprintf(port,"This is BlackJack Game. You are player1. Input something to start!\n");
         scanf("%s",s);
-	del_lines(port,2);
+	del_lines(port,1);
 	fprintf(port,"Waiting for player2 to start......\n");
 	P(0);nttask++;V(0);
 	P(1);
+	del_lines(port,1);
 	while(1){
-		fprintf(port,"your score:$%d How many tips do you want to bet? 1tip=$10 \n",player1_tip);
+		fprintf(port,"==============round %d ==============\n",round_num);
+		fprintf(port,"player1 score:$%d, player2 score:$%d\n How many tips do you want to bet? 1tip=$10 \n",player1_tip,player2_tip);
         	fscanf(sport,"%d", &player1_bet);
         	player1_bet=player1_bet*10;
+		del_lines(port,2);
 		fprintf(port,"Waiting for player2 to bet..........\n");
 		P(0);nttask++;V(0);
 		P(1);
+		del_lines(port,1);
         	fprintf(port,"player1 bet $%d and player2 bet $%d\n",player1_bet,player2_bet);
 		trump_init();
 		player1_trumps[0]=draw_trump();
@@ -329,38 +359,44 @@ void p1(){
 			print_table(port,0);
 			fprintf(port,"HIT:type h,STAND:type s,DOUBLE:type d\n");
 			fscanf(sport,"%s",s);
+			del_lines(port,2);
 			if(s[0] == 'h'){
 				if(player1_index>=10){
 					fprintf(port,"no more hit\n");
 					is_stand=1;
 					break;
 				}else{
+					fprintf(port,"hit!\n");
 					player1_trumps[player1_index]=draw_trump();
 					player1_index++;
-					//printf("\033[4A\r");  // 4行上に移動して行の先頭へ
-					//print_table(com0out,0);
 				}
 			}else if(s[0] == 'd'){
-				if(player1_index>=10){
-					fprintf(port,"no more hit\n");
+				if(player1_index>=3){
+					fprintf(port,"not able to double! Automatically stay!\n");
 					is_stand=1;
 					break;
 				}else{
 					player1_trumps[player1_index]=draw_trump();
 					player1_index++;
-					//printf("\033[4A\r");  // 4行上に移動して行の先頭へ
+					del_lines(port,3);
 					print_table(port,0);
+					fprintf(port,"double!\n");
 					player1_bet=player1_bet*2;
 				}
 				is_stand=1;
 				break;
 			}else if(s[0] == 's'){
+				fprintf(port,"stay!\n");
 				is_stand=1;
+				break;
 			}
+			del_lines(port,4);
 		}//選択終わり
 		fprintf(port,"waiting for player2 to ready......\n");
 		P(0);nttask++;V(0);
                 P(1);
+		del_lines(com0out,5);
+		del_lines(com1out,5);
 		dealer_score=dealer_turn();
                 player1_score=cal_score(player1_trumps,player1_index);
                 player2_score=cal_score(player2_trumps,player2_index);
@@ -368,8 +404,12 @@ void p1(){
                 print_results(com1out);
 		player1_tip=player1_tip+player1_tip_change;
 		player2_tip=player2_tip+player2_tip_change;
+		reset_trump();
+		round_num++;
 		P(0);nttask++;V(0);
                 P(1);
+		
+
 
 	}
 }
@@ -380,17 +420,21 @@ void p2(){
         char s[256];
         fprintf(port,"This is BlackJack Game. You are player2. Input something to start!\n");
         fscanf(sport,"%s",s);
-        del_lines(sport,2);
+        del_lines(port,1);
         fprintf(port,"Waiting for player1 to start......\n");
 	P(0);nttask++;V(0);
 	P(1);
+	del_lines(port,1);
         while(1){
-                fprintf(port,"your score:$%d\nHow many tips do you want to bet? 1 tip=$10 \n",player2_tip);
+		fprintf(port,"==============round %d ==============\n",round_num);
+		fprintf(port,"player1 score:$%d, player2 score:$%d\n How many tips do you want to bet? 1tip=$10 \n",player1_tip,player2_tip);
                 fscanf(sport,"%d", &player2_bet);
                 player2_bet=player2_bet*10;
+		del_lines(port,2);
 		fprintf(port,"Waiting for player1 to bet.......\n");
 		P(0);nttask++;V(0);
 		P(1);
+		del_lines(port,1);
                 fprintf(port,"player1 bet $%d and player2 bet $%d\n",player1_bet,player2_bet);
 		P(0);nttask++;V(0);
 		P(1);
@@ -399,34 +443,38 @@ void p2(){
 			print_table(port,0);
 			fprintf(port,"HIT:type h,STAND:type s,DOUBLE:type d\n");
 			fscanf(sport,"%s",s);
+			del_lines(port,2);
 			if(s[0] == 'h'){
 				if(player2_index>=10){
 					fprintf(port,"no more hit\n");
 					is_stand=1;
 					break;
 				}else{
+					fprintf(port,"hit!\n");
 					player2_trumps[player2_index]=draw_trump();
 					player2_index++;
-					//printf("\033[4A\r");  // 4行上に移動して行の先頭へ
-					//print_table(com0out,0);
 				}
 			}else if(s[0] == 'd'){
-				if(player2_index>=10){
-					fprintf(port,"no more hit\n");
+				if(player2_index>=3){
+					fprintf(port,"not able to double! Automatically stay!\n");
 					is_stand=1;
 					break;
 				}else{
 					player2_trumps[player2_index]=draw_trump();
 					player2_index++;
-					//printf("\033[4A\r");  // 4行上に移動して行の先頭へ
+					del_lines(port,3);
 					print_table(port,0);
+					fprintf(port,"double!\n");
 					player2_bet=player2_bet*2;
 				}
 				is_stand=1;
 				break;
 			}else if(s[0] == 's'){
+				fprintf(port,"stay!\n");
 				is_stand=1;
+				break;
 			}
+			del_lines(port,4);
 		}//選択終わり
 		fprintf(port,"waiting for player1 to ready......\n");
 		P(0);nttask++;V(0);
