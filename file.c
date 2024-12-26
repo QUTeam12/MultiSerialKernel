@@ -273,7 +273,6 @@ void read_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
     	fprintf(r_w_stream, "You can see the content of a file even if someone else is editing.\n");
     	fprintf(r_w_stream, "#Attention# The user in Write mode is only one by a file.\n");
     	fprintf(r_w_stream, "If someone else switch from Write Mode, you switch to it.\n\n");
-		const char* buf = file_table[id].buffer;
 		out_no_newline_end(get_port(r_w_stream), file_table[id].buffer, file_table[id].size);
 		sleep();
     }
