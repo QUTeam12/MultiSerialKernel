@@ -32,6 +32,7 @@ void terminal_mode(FILE* r_w_stream) {
 	char command[COMMAND_SIZE];
 	char filename[FILENAME_SIZE];
 	input_command(command, filename, r_w_stream);
+    execute_command(command, filename, r_w_stream);
 }
 
 /***********************************
@@ -354,8 +355,6 @@ void input(char* buf, const unsigned int buf_size, FILE* r_stream) {
 **********************************/
 void split(const char* from, const unsigned int from_size, char* first, const unsigned int first_size, char* second, const unsigned int second_size, const char *sep) {
 	check_null(from);
-	check_null(first);
-	check_null(second);
 	char temp_from[from_size];
 	copy_string(from, temp_from, from_size);
 	char* temp_first = strtok(temp_from, sep);
@@ -381,7 +380,6 @@ void split(const char* from, const unsigned int from_size, char* first, const un
 **********************************/
 void copy_string(const char* from, char* to, const unsigned int to_size) {
     check_null(from);
-    check_null(to);
     if (to_size == 0) {
         fprintf(stderr, "Copy Error: (copy_string) to_size is 0\n");
         exit(EXIT_FAILURE);
