@@ -12,7 +12,65 @@ FILE_ENTRY file_table[NUM_FILE];
 extern SEMAPHORE_TYPE semaphore[NUMSEMAPHORE];
 
 /***********************************
- * @brief ファイルテーブルのデバッグ
+ * @brief ファイルテーブルの初期化
+ **********************************/
+void init_file_table() {
+    for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
+        memset(&file_table[id], 0, sizeof(FILE_ENTRY));  // FILE_ENTRYのメモリを0で埋める
+        file_table[id].size = UNDEFINED_SIZE;
+        file_table[id].semaphore_id = id;
+    }
+}
+
+/***********************************
+ * @brief ターミナルの起動
+ * @param r_w_stream: 読み書き対応ファイルストリーム
+***********************************/
+void terminal_mode(FILE* r_w_stream) {
+    fprintf(r_w_stream, "\n\n:Terminal Mode: You have some options.\n");
+    fprintf(r_w_stream, "If you wanna know commands, please type [help].\n");
+	char command[COMMAND_SIZE];
+	char filename[FILENAME_SIZE];
+	input_command(command, filename, r_w_stream);
+}
+
+/***********************************
+ * @brief コマンドの実行
+ * @param r_w_stream: 読み書き対応ファイルストリーム
+***********************************/
+void execute_command(const char* command, const char* filename, FILE* r_w_stream) {
+	if (strcmp(command, "help") == 0) {
+		print_commands(r_w_stream);
+	} else if (strcmp(command, "ls") == 0) {
+		print_file_table(r_w_stream);
+	} else if (strcmp(command, "touch") == 0) {
+        touch(filename, r_w_stream);
+	} else if (strcmp(command, "rm") == 0) {
+        rm(filename, r_w_stream);
+	} else if (strcmp(command, "edit") == 0) {
+        edit(filename, r_w_stream);
+	} else {
+		fprintf(r_w_stream, "\nInvalid Command. Please push again.\n");
+	}
+}
+
+/***********************************
+ * @brief コマンド一覧の出力
+ * @param w_stream: 書き込み対応ファイルストリーム
+ **********************************/
+void print_commands(FILE* w_stream) {
+	fprintf(w_stream, "\n:Commands:\n");
+	fprintf(w_stream, "[help] You can see the commands you execute\n");
+	fprintf(w_stream, "[ls] You can see the file table\n");
+	fprintf(w_stream, "[touch filename] You can create the file(by 16 characters)\n");
+	fprintf(w_stream, "[rm filename] You can delete the file\n");
+	fprintf(w_stream, "[edit filename] You can edt the file\n");
+    fprintf(w_stream, "#Attention# The user in Write mode is only one by a file.\n");
+    fprintf(w_stream, "If someone else is editing the file, you switch to Read Mode.\n\n");
+}
+
+/***********************************
+ * @brief ファイルテーブルの出力
  * @param w_stream: 書き込み対応ファイルストリーム
  **********************************/
 void print_file_table(FILE* w_stream) {
@@ -28,49 +86,6 @@ void print_file_table(FILE* w_stream) {
             file_table[id].semaphore_id);
     }
     fprintf(w_stream, "\n");
-}
-
-/***********************************
- * @brief ファイルテーブルの初期化
- **********************************/
-void init_file_table() {
-    for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
-        memset(&file_table[id], 0, sizeof(FILE_ENTRY));  // FILE_ENTRYのメモリを0で埋める
-        file_table[id].size = UNDEFINED_SIZE;
-        file_table[id].semaphore_id = id;
-    }
-}
-
-/***********************************
-***********************************/
-void select_command(FILE* r_w_stream) {
-    fprintf(r_w_stream, "\n\n:Select Mode: You have some options.\n");
-    fprintf(r_w_stream, "[t] Touch: You can create file.\n");
-    fprintf(r_w_stream, "[r] Remove: You can delete file.\n");
-    fprintf(r_w_stream, "[e] Edit: You can edit file.\n");
-    char filename[16];
-    switch (inbyte(get_port(r_w_stream))) {
-        case 't':
-            fprintf(r_w_stream, "Please input a filename(16 characters).\n");
-            input(filename, sizeof(filename), r_w_stream);
-            touch(filename, r_w_stream);
-			print_file_table(r_w_stream); // TODO: debug
-            break;
-        case 'r':
-            fprintf(r_w_stream, "Please input the name of the file you wanna delete.\n");
-            input(filename, sizeof(filename), r_w_stream);
-            rm(filename, r_w_stream);
-			print_file_table(r_w_stream); // TODO: debug
-            break;
-        case 'e':
-            fprintf(r_w_stream, "Please input the name of the file you wanna edit.\n");
-            input(filename, sizeof(filename), r_w_stream);
-            edit(filename, r_w_stream);
-			print_file_table(r_w_stream); // TODO: debug
-            break;
-        default:
-            fprintf(r_w_stream, "\nInvalid Command. Please push again.\n");
-    }
 }
 
 /***********************************
@@ -97,23 +112,6 @@ void touch(const char* filename, FILE* w_stream) {
         }
     }
     fprintf(w_stream, "\nFile Table is Full. Please delete some files.\n");
-}
-
-/***********************************
- * @brief 安全に文字列をコピーする
- * @param from コピー元の文字列
- * @param to コピー先の文字列バッファ
- * @param to_size コピー先のバッファサイズ(関数内だとポインタのサイズを得てしまうため関数外でサイズを指定する必要がある)
-**********************************/
-void copy_string(const char* from, char* to, size_t to_size) {
-    check_null(from);
-    check_null(to);
-    if (to_size == 0) {
-        fprintf(stderr, "Copy Error: (copy_string) to_size is 0\n");
-        exit(EXIT_FAILURE);
-    }
-    strncpy(to, from, to_size - 1);
-    to[to_size - 1] = '\0';  // 終端文字を必ず設定
 }
 
 /***********************************
@@ -275,10 +273,8 @@ void read_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
     	fprintf(r_w_stream, "#Attention# The user in Write mode is only one by a file.\n");
     	fprintf(r_w_stream, "If someone else switch from Write Mode, you switch to it.\n\n");
 		const char* buf = file_table[id].buffer;
-		// fprintf(r_w_stream, "aiueo\nkakikukeko\n");
-		// fprintf(r_w_stream, "%s\n", buf);
 		out_no_newline_end(get_port(r_w_stream), file_table[id].buffer, file_table[id].size);
-		sleep(r_w_stream, 3);
+		sleep();
     }
 }
 
@@ -319,12 +315,25 @@ void out_no_newline_end(const int port, const char* buf, const unsigned int buf_
 }
 
 /***********************************
+ * @brief コマンド入力を受け取る
+ * @param command: 文字配列(の先頭アドレス)
+ * @param file: 文字配列(の先頭アドレス)
+ * @param r_stream: 読み込み対応ストリーム
+ **********************************/
+void input_command(char* command, char* file, FILE* r_stream) {
+	const unsigned int buf_size = COMMAND_SIZE + FILENAME_SIZE - 1; // 余剰な\0考慮分を引く
+	char buf[buf_size];
+	input(buf, buf_size, r_stream);	
+	split(buf, buf_size, command, COMMAND_SIZE, file, FILENAME_SIZE, " ");
+}
+
+/***********************************
  * @brief 入力を受け取る
  * @param buf: 文字配列(の先頭アドレス)
  * @param buf_size: 文字配列のサイズ
  * @param r_stream: 読み込み対応ストリーム
  **********************************/
-void input(const char* buf, size_t buf_size, FILE* r_stream) {
+void input(char* buf, const unsigned int buf_size, FILE* r_stream) {
     check_null(buf);
     if (fgets(buf, buf_size, r_stream) == NULL) {
         fprintf(stderr, "Input Error: (input) fgets is failed\n");
@@ -334,6 +343,51 @@ void input(const char* buf, size_t buf_size, FILE* r_stream) {
 	if (newline != NULL) {
 		*newline = '\0';
 	}
+}
+
+/***********************************
+ * @brief 安全に文字列を2分割する(区切り文字がない場合secondは空)
+ * @param from 分割元の文字列
+ * @param first: ２分割した前の文字列
+ * @param second: ２分割した後の文字列
+ * @param sep: 区切り文字列
+**********************************/
+void split(const char* from, const unsigned int from_size, char* first, const unsigned int first_size, char* second, const unsigned int second_size, const char *sep) {
+	check_null(from);
+	check_null(first);
+	check_null(second);
+	char temp_from[from_size];
+	copy_string(from, temp_from, from_size);
+	char* temp_first = strtok(temp_from, sep);
+	if (temp_first == NULL) {
+		fprintf(stderr, "Split Error: (split) strtok is failed\n");
+		exit(EXIT_FAILURE);
+	}
+	char* temp_second = strtok(NULL, sep);
+	if (temp_second == NULL) {
+		second[0] = '\0';
+	}
+	copy_string(temp_first, first, first_size);
+	copy_string(temp_second, second, second_size);	
+}
+	
+	
+
+/***********************************
+ * @brief 安全に文字列をコピーする
+ * @param from コピー元の文字列
+ * @param to コピー先の文字列バッファ
+ * @param to_size コピー先のバッファサイズ(関数内だとポインタのサイズを得てしまうため関数外でサイズを指定する必要がある)
+**********************************/
+void copy_string(const char* from, char* to, const unsigned int to_size) {
+    check_null(from);
+    check_null(to);
+    if (to_size == 0) {
+        fprintf(stderr, "Copy Error: (copy_string) to_size is 0\n");
+        exit(EXIT_FAILURE);
+    }
+    strncpy(to, from, to_size - 1);
+    to[to_size - 1] = '\0';  // 終端文字を必ず設定
 }
 
 /***********************************
@@ -347,9 +401,3 @@ void check_null(const char* ptr) {
     }
 }
 
-void sleep(unsigned int seconds) {
-    clock_t start_time = clock();
-    clock_t end_time = start_time + (seconds * CLOCKS_PER_SEC);
-    while (clock() < end_time) {
-    }
-}

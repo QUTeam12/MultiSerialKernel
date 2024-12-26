@@ -20,13 +20,13 @@ void task1() {
         is_file_system_initialized = 1;
     }
     while (1) {
-        select_command(com0inout);
+        terminal_mode(com0inout);
     }
 }
 
 void task2() {
     while (1) {
-        select_command(com1inout);
+        terminal_mode(com1inout);
     }
 }
 
