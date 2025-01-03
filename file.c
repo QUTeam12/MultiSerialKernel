@@ -36,6 +36,19 @@ void terminal_mode(FILE* r_w_stream) {
 }
 
 /***********************************
+ * @brief コマンド入力を受け取る
+ * @param command: 文字配列(の先頭アドレス)
+ * @param file: 文字配列(の先頭アドレス)
+ * @param r_stream: 読み込み対応ストリーム
+ **********************************/
+void input_command(char* command, char* file, FILE* r_stream) {
+	const unsigned int buf_size = COMMAND_SIZE + FILENAME_SIZE - 1; // 余剰な\0考慮分を引く
+	char buf[buf_size];
+	input(buf, buf_size, r_stream);	
+	split(buf, buf_size, command, COMMAND_SIZE, file, FILENAME_SIZE, " ");
+}
+
+/***********************************
  * @brief コマンドの実行
  * @param r_w_stream: 読み書き対応ファイルストリーム
 ***********************************/
@@ -312,19 +325,6 @@ void out_no_newline_end(const int port, const char* buf, const unsigned int buf_
         }
         outbyte(port, outbyte_c);
     }
-}
-
-/***********************************
- * @brief コマンド入力を受け取る
- * @param command: 文字配列(の先頭アドレス)
- * @param file: 文字配列(の先頭アドレス)
- * @param r_stream: 読み込み対応ストリーム
- **********************************/
-void input_command(char* command, char* file, FILE* r_stream) {
-	const unsigned int buf_size = COMMAND_SIZE + FILENAME_SIZE - 1; // 余剰な\0考慮分を引く
-	char buf[buf_size];
-	input(buf, buf_size, r_stream);	
-	split(buf, buf_size, command, COMMAND_SIZE, file, FILENAME_SIZE, " ");
 }
 
 /***********************************
