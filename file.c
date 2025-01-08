@@ -109,25 +109,44 @@ void print_file_table(FILE* w_stream) {
  **********************************/
 void touch(const char* filename, FILE* w_stream) {
     check_null(filename);
-	if (filename[0] == '\0') {
-		fprintf(w_stream, "\nThe filename is empty. Please type again.\n");
-		return;
-	}
-    for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
-        if (strcmp(file_table[id].name, filename) == 0) {
-            fprintf(w_stream, "\nThe file already exists. Please type another name.\n");
-            return;
-        }
+    if (is_filename_empty(filename)) {
+	fprintf(w_stream, "\nThe filename is empty. Please type again.\n");
+        return;
+    }
+    if (is_file_exists(filename) {
+	fprintf(w_stream, "\nThe file already exists. Please type another name.\n");
+        return;
     }
     for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
-        if (file_table[id].name[0] == '\0') {
+        if (is_filename_empty(filename)) {
             copy_string(filename, file_table[id].name, sizeof(file_table[id].name));
             file_table[id].size = 0;
-			fprintf(w_stream, "\nThe file was created.\n");
+	    fprintf(w_stream, "\nThe file was created.\n");
             return;
         }
     }
     fprintf(w_stream, "\nFile Table is Full. Please delete some files.\n");
+}
+
+/***********************************
+ * @brief ファイル名が空かどうか
+ * @param filename: 文字配列(の先頭アドレス)
+ **********************************/
+unsigned int is_filename_empty(const char* filename) {
+    return filename[0] == '\0';
+}
+
+/***********************************
+ * @brief ファイルが存在するかどうか
+ * @param filename: 文字配列(の先頭アドレス)
+ **********************************/
+unsigned int is_file_exists(const char* filename) {
+    for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
+        if (strcmp(file_table[id].name, filename) == 0) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /***********************************
@@ -137,21 +156,19 @@ void touch(const char* filename, FILE* w_stream) {
  **********************************/
 void rm(const char* filename, FILE* w_stream) {
     check_null(filename);
-	if (filename[0] == '\0') {
-		fprintf(w_stream, "\nThe filename is empty. Please type again.\n");
-		return;
-	}
+    if (is_filename_empty(filename)) {
+	fprintf(w_stream, "\nThe filename is empty. Please type again.\n");
+        return;
+    }
     FILE_ID_TYPE id = search_file_id(filename);
-	if (id == -1) {
+    if (id == -1) {
         fprintf(w_stream, "\nFile Not Found\n");
         return;
     }
-    if (strcmp(file_table[id].name, filename) == 0) {
-        memset(&file_table[id], 0, sizeof(FILE_ENTRY));
-        file_table[id].size = UNDEFINED_SIZE;
-		file_table[id].semaphore_id = id;
-		fprintf(w_stream, "\nThe file was deleted.\n");
-    }
+    memset(&file_table[id], 0, sizeof(FILE_ENTRY));
+    file_table[id].size = UNDEFINED_SIZE;
+    file_table[id].semaphore_id = id;
+    fprintf(w_stream, "\nThe file was deleted.\n");
 }
 
 /***********************************
