@@ -177,7 +177,6 @@ void rm(const char* filename, FILE* w_stream) {
  * @return FILE_ID_TYPE: ファイルテーブルのインデックス
  **********************************/
 FILE_ID_TYPE search_file_id(const char* filename) {
-    check_null(filename);
     for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
         if (strcmp(file_table[id].name, filename) == 0) {
             return id;
