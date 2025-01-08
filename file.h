@@ -36,6 +36,8 @@ void execute_command(const char* command, const char* filename, FILE* r_w_stream
 void print_commands(FILE* w_stream);
 void print_file_table(FILE* w_stream);
 void touch(const char* filename, FILE* w_stream);
+unsigned int is_filename_empty(const char* filename);
+unsigned int is_file_exists(const char* filename);
 void rm(const char* filename, FILE* w_stream);
 FILE_ID_TYPE search_file_id(const char* filename);
 void edit(const char* filename, FILE* r_w_stream);

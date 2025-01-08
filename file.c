@@ -110,18 +110,18 @@ void print_file_table(FILE* w_stream) {
 void touch(const char* filename, FILE* w_stream) {
     check_null(filename);
     if (is_filename_empty(filename)) {
-	fprintf(w_stream, "\nThe filename is empty. Please type again.\n");
+		fprintf(w_stream, "\nThe filename is empty. Please type again.\n");
         return;
     }
-    if (is_file_exists(filename) {
-	fprintf(w_stream, "\nThe file already exists. Please type another name.\n");
+    if (is_file_exists(filename)) {
+		fprintf(w_stream, "\nThe file already exists. Please type another name.\n");
         return;
     }
     for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
-        if (is_filename_empty(filename)) {
+        if (is_filename_empty(file_table[id].name)) {
             copy_string(filename, file_table[id].name, sizeof(file_table[id].name));
             file_table[id].size = 0;
-	    fprintf(w_stream, "\nThe file was created.\n");
+	    	fprintf(w_stream, "\nThe file was created.\n");
             return;
         }
     }
@@ -228,7 +228,7 @@ void write_mode(FILE* r_w_stream, FILE_ID_TYPE id, const unsigned int is_backlin
 	unsigned int file_size = file_table[id].size;	
 	out_no_newline_end(port, buf, file_size);
 
-    for (file_table[id].size; file_table[id].size < sizeof(file_table[id].buffer); file_table[id].size++) {
+    for (; file_table[id].size < sizeof(file_table[id].buffer); file_table[id].size++) {
         char c = inbyte(port);
         switch (c) {
             case '\r':  // CRの場合
@@ -352,7 +352,6 @@ void out_no_newline_end(const int port, const char* buf, const unsigned int buf_
  * @param r_stream: 読み込み対応ストリーム
  **********************************/
 void input(char* buf, const unsigned int buf_size, FILE* r_stream) {
-    check_null(buf);
     if (fgets(buf, buf_size, r_stream) == NULL) {
         fprintf(stderr, "Input Error: (input) fgets is failed\n");
         exit(EXIT_FAILURE);
@@ -396,7 +395,6 @@ void split(const char* from, const unsigned int from_size, char* first, const un
  * @param to_size コピー先のバッファサイズ(関数内だとポインタのサイズを得てしまうため関数外でサイズを指定する必要がある)
 **********************************/
 void copy_string(const char* from, char* to, const unsigned int to_size) {
-    check_null(from);
     if (to_size == 0) {
         fprintf(stderr, "Copy Error: (copy_string) to_size is 0\n");
         exit(EXIT_FAILURE);
