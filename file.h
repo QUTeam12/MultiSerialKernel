@@ -42,6 +42,7 @@ void rm(const char* filename, FILE* w_stream);
 FILE_ID_TYPE search_file_id(const char* filename);
 void edit(const char* filename, FILE* r_w_stream);
 void write_mode(FILE* r_w_stream, FILE_ID_TYPE id, const unsigned int is_backline);
+void command_mode(FILE* r_w_stream, FILE_ID_TYPE id)
 void read_mode(FILE* r_w_stream, FILE_ID_TYPE id);
 unsigned int get_port(FILE* stream);
 void out_no_newline_end(int port, const char* buf, const unsigned int buf_size);
