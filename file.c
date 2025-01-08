@@ -329,6 +329,8 @@ unsigned int get_port(FILE* stream) {
     unsigned int fd = fileno(stream);
     switch (fd) {
         case 0:
+	case 1:
+	case 2:
         case 3:
             return 0;
         case 4:
