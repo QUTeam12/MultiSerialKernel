@@ -118,6 +118,8 @@ void touch(const char* filename, FILE* w_stream) {
             fprintf(w_stream, "\nThe file already exists. Please type another name.\n");
             return;
         }
+    }
+    for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
         if (file_table[id].name[0] == '\0') {
             copy_string(filename, file_table[id].name, sizeof(file_table[id].name));
             file_table[id].size = 0;
