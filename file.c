@@ -227,7 +227,7 @@ void write_mode(FILE* r_w_stream, FILE_ID_TYPE id, const unsigned int is_backlin
     const unsigned int port = get_port(r_w_stream);
     char* buf = file_table[id].buffer;
     unsigned int file_size = file_table[id].size;
-    out_no_newline_end(port, buf, file_size);
+    out_no_newline_end(port, buf, file_size); // 終端に改行がない場合があるためfprintfは駄目
 
     for (; file_table[id].size < sizeof(file_table[id].buffer); file_table[id].size++) {
         char c = inbyte(port);
@@ -316,7 +316,7 @@ void read_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
     	fprintf(r_w_stream, "You can see the content of a file even if someone else is editing.\n");
     	fprintf(r_w_stream, "#Attention# The user in Write mode is only one by a file.\n");
     	fprintf(r_w_stream, "If someone else switch from Write Mode, you switch to it.\n\n");
-	out_no_newline_end(get_port(r_w_stream), file_table[id].buffer, file_table[id].size); // \nより後も出力したいのでfprintじゃ駄目
+	out_no_newline_end(get_port(r_w_stream), file_table[id].buffer, file_table[id].size); // 終端に改行がない場合があるためfprintfは駄目
 	sleep(); // Cのタイマ関連のライブラリが使用不可能なのと自前実装の場合最適化によりタイマ実装不可能なのでアセンブリ実装
     }
 }
