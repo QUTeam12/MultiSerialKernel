@@ -193,7 +193,7 @@ FILE_ID_TYPE search_file_id(const char* filename) {
  **********************************/
 void edit(const char* filename, FILE* r_w_stream) {
     check_null(filename);
-    if (filename[0] == '\0') {
+    if (is_filename_empty(filename)) {
 	fprintf(r_w_stream, "\nThe filename is empty. Please type again.\n");
 	return;
     }
