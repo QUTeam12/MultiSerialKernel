@@ -381,6 +381,8 @@ void split(const char* from, const unsigned int from_size, char* first, const un
 	char* temp_second = strtok(NULL, sep);
 	if (temp_second == NULL) {
 		second[0] = '\0';
+        copy_string(temp_first, first, first_size);
+        return;
 	}
 	copy_string(temp_first, first, first_size);
 	copy_string(temp_second, second, second_size);	
@@ -395,6 +397,7 @@ void split(const char* from, const unsigned int from_size, char* first, const un
  * @param to_size コピー先のバッファサイズ(関数内だとポインタのサイズを得てしまうため関数外でサイズを指定する必要がある)
 **********************************/
 void copy_string(const char* from, char* to, const unsigned int to_size) {
+    check_null(from);
     if (to_size == 0) {
         fprintf(stderr, "Copy Error: (copy_string) to_size is 0\n");
         exit(EXIT_FAILURE);
