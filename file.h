@@ -20,9 +20,9 @@
 typedef unsigned int FILE_ID_TYPE;
 
 typedef struct {
-        char name[16 + 1];  // ファイル名
+        char name[FILENAME_SIZE];  // ファイル名
         int size;           // ファイルサイズ
-        char buffer[256 + 1];   // ファイルデータ
+        char buffer[BUFFER_SIZE];   // ファイルデータ
         int semaphore_id;  // 排他制御用セマフォID
 } FILE_ENTRY;
 
