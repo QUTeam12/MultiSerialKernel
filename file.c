@@ -202,9 +202,7 @@ void edit(const char* filename, FILE* r_w_stream) {
         fprintf(r_w_stream, "\nFile Not Found\n");
         return;
     }
-    if (strcmp(file_table[id].name, filename) == 0) {
-        write_mode(r_w_stream, id, 0);
-    }
+    write_mode(r_w_stream, id, 0);
 }
 
 /***********************************
