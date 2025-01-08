@@ -310,7 +310,7 @@ void read_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
     while (1) {
         if (semaphore[semaphore_id].count == 1) {
 	    write_mode(r_w_stream, id, 0);
-	    break;
+	    return;
 	}
     	fprintf(r_w_stream, "\n\n:Read Mode: Someone else is in Write Mode. So you need to wait.\n");
     	fprintf(r_w_stream, "You can see the content of a file even if someone else is editing.\n");
