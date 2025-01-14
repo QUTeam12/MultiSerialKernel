@@ -284,18 +284,18 @@ void command_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
     fprintf(r_w_stream, "[w] Restart Write Mode\n");
     const int semaphore_id = file_table[id].semaphore_id;
     while (1) {
-        switch (inbyte(get_port(r_w_stream)) {
+        switch (inbyte(get_port(r_w_stream))) {
             case '\r':
             case '\n':
                 V(semaphore_id);
                 return;
             case 'w':
                 V(semaphore_id);
-	        write_mode(r_w_stream, id, 0);
-		return;
+	            write_mode(r_w_stream, id, 0);
+                return;
             default:
                 fprintf(r_w_stream, "Invalid Command. Please push again.\n");
-		break;
+                break;
         }
     }
 }
