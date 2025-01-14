@@ -110,18 +110,18 @@ void print_file_table(FILE* w_stream) {
 void touch(const char* filename, FILE* w_stream) {
     check_null(filename);
     if (is_filename_empty(filename)) {
-	fprintf(w_stream, "\nThe filename is empty. Please type again.\n");
+        fprintf(w_stream, "\nThe filename is empty. Please type again.\n");
         return;
     }
     if (is_file_exists(filename)) {
-	fprintf(w_stream, "\nThe file already exists. Please type another name.\n");
+        fprintf(w_stream, "\nThe file already exists. Please type another name.\n");
         return;
     }
     for (FILE_ID_TYPE id = 0; id < NUM_FILE; id++) {
         if (is_filename_empty(file_table[id].name)) {
             copy_string(filename, file_table[id].name, sizeof(file_table[id].name));
             file_table[id].size = 0;
-	    fprintf(w_stream, "\nThe file was created.\n");
+            fprintf(w_stream, "\nThe file was created.\n");
             return;
         }
     }
@@ -159,7 +159,7 @@ unsigned int is_file_exists(const char* filename) {
 void rm(const char* filename, FILE* w_stream) {
     check_null(filename);
     if (is_filename_empty(filename)) {
-	fprintf(w_stream, "\nThe filename is empty. Please type again.\n");
+        fprintf(w_stream, "\nThe filename is empty. Please type again.\n");
         return;
     }
     FILE_ID_TYPE id = search_file_id(filename);
@@ -194,8 +194,8 @@ FILE_ID_TYPE search_file_id(const char* filename) {
 void edit(const char* filename, FILE* r_w_stream) {
     check_null(filename);
     if (is_filename_empty(filename)) {
-	fprintf(r_w_stream, "\nThe filename is empty. Please type again.\n");
-	return;
+        fprintf(r_w_stream, "\nThe filename is empty. Please type again.\n");
+        return;
     }
     FILE_ID_TYPE id = search_file_id(filename);
     if (id == -1) {
@@ -214,10 +214,10 @@ void edit(const char* filename, FILE* r_w_stream) {
 void write_mode(FILE* r_w_stream, FILE_ID_TYPE id, const unsigned int is_backline) {
     const int semaphore_id = file_table[id].semaphore_id;
     if (is_backline == 0) {
-	if (semaphore[semaphore_id].count == 0) {
-	    read_mode(r_w_stream, id);
-	        return;
-	}
+        if (semaphore[semaphore_id].count == 0) {
+            read_mode(r_w_stream, id);
+            return;
+        }
     	P(semaphore_id);
     }
 
@@ -259,14 +259,14 @@ void write_mode(FILE* r_w_stream, FILE_ID_TYPE id, const unsigned int is_backlin
 	    case '\x9': // タブの場合
 	        for (unsigned int j = 0; j < 4; j++) {
                     *(buf + file_table[id].size) = ' ';
-		    file_table[id].size++;
+                    file_table[id].size++;
                     outbyte(port, ' ');
-		}
-		break;
-            default:  // 通常文字の場合
-                outbyte(port, c);
-                *(buf + file_table[id].size) = c;
-                break;
+            }
+            break;
+        default:  // 通常文字の場合
+            outbyte(port, c);
+            *(buf + file_table[id].size) = c;
+            break;
         }
     }
     fprintf(stderr, "Buffer Overflow Error: (write_mode) buf is overflowed\n");
@@ -309,15 +309,15 @@ void read_mode(FILE* r_w_stream, FILE_ID_TYPE id) {
     const int semaphore_id = file_table[id].semaphore_id;
     while (1) {
         if (semaphore[semaphore_id].count == 1) {
-	    write_mode(r_w_stream, id, 0);
-	    return;
-	}
+            write_mode(r_w_stream, id, 0);
+            return;
+        }
     	fprintf(r_w_stream, "\n\n:Read Mode: Someone else is in Write Mode. So you need to wait.\n");
     	fprintf(r_w_stream, "You can see the content of a file even if someone else is editing.\n");
     	fprintf(r_w_stream, "#Attention# The user in Write mode is only one by a file.\n");
     	fprintf(r_w_stream, "If someone else switch from Write Mode, you switch to it.\n\n");
-	out_no_newline_end(get_port(r_w_stream), file_table[id].buffer, file_table[id].size); // 終端に改行がない場合があるためfprintfは駄目
-	sleep(); // Cのタイマ関連のライブラリが使用不可能なのと自前実装の場合最適化によりタイマ実装不可能なのでアセンブリ実装
+        out_no_newline_end(get_port(r_w_stream), file_table[id].buffer, file_table[id].size); // 終端に改行がない場合があるためfprintfは駄目
+        sleep(); // Cのタイマ関連のライブラリが使用不可能なのと自前実装の場合最適化によりタイマ実装不可能なのでアセンブリ実装
     }
 }
 
@@ -329,8 +329,8 @@ unsigned int get_port(FILE* stream) {
     unsigned int fd = fileno(stream);
     switch (fd) {
         case 0:
-	case 1:
-	case 2:
+        case 1:
+        case 2:
         case 3:
             return 0;
         case 4:
@@ -338,6 +338,7 @@ unsigned int get_port(FILE* stream) {
         default:
             fprintf(stderr, "File Descriptor Error: (get_port) fd is invalid\n");
             exit(EXIT_FAILURE);
+            break;
     }
 }
 
@@ -353,7 +354,7 @@ void out_no_newline_end(const int port, const char* buf, const unsigned int buf_
         if (outbyte_c == '\n') {
             outbyte(port, '\r');
             outbyte(port, '\n');
-　　　　　　　continue;
+            continue;
         }
         outbyte(port, outbyte_c);
     }
@@ -370,10 +371,10 @@ void input(char* buf, const unsigned int buf_size, FILE* r_stream) {
         fprintf(stderr, "Input Error: (input) fgets is failed\n");
         exit(EXIT_FAILURE);
     }
-　　char* newline = strchr(buf,'\n');
-　　if (newline != NULL) {
-　　　　*newline = '\0';
-　　}
+    char* newline = strchr(buf,'\n');
+    if (newline != NULL) {
+        *newline = '\0';
+    }
 }
 
 /***********************************
@@ -383,23 +384,31 @@ void input(char* buf, const unsigned int buf_size, FILE* r_stream) {
  * @param second: ２分割した後の文字列
  * @param sep: 区切り文字列
 **********************************/
-void split(const char* from, const unsigned int from_size, char* first, const unsigned int first_size, char* second, const unsigned int second_size, const char *sep) {
-	check_null(from);
-	char temp_from[from_size];
-	copy_string(from, temp_from, from_size);
-	char* temp_first = strtok(temp_from, sep);
+void split(
+    const char* from,
+    const unsigned int from_size,
+    char* first,
+    const unsigned int first_size,
+    char* second,
+    const unsigned int second_size,
+    const char *sep
+) {
+    check_null(from);
+    char temp_from[from_size];
+    copy_string(from, temp_from, from_size);
+    char* temp_first = strtok(temp_from, sep);
 	if (temp_first == NULL) {
-	　　fprintf(stderr, "Split Error: (split) strtok is failed\n");
-	　　exit(EXIT_FAILURE);
-	}
-	char* temp_second = strtok(NULL, sep);
+        fprintf(stderr, "Split Error: (split) strtok is failed\n");
+        exit(EXIT_FAILURE);
+    }
+    char* temp_second = strtok(NULL, sep);
 	if (temp_second == NULL) {
-	　　second[0] = '\0';
-        　　copy_string(temp_first, first, first_size);
-        　　return;
-	}
-	copy_string(temp_first, first, first_size);
-	copy_string(temp_second, second, second_size);	
+        second[0] = '\0';
+        copy_string(temp_first, first, first_size);
+        return;
+    }
+    copy_string(temp_first, first, first_size);
+    copy_string(temp_second, second, second_size);	
 }
 	
 	
